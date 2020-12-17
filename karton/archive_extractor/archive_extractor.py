@@ -3,7 +3,7 @@ import tempfile
 from karton.core import Karton, Resource, Task
 from .__version__ import __version__
 
-import sflock
+from .sflock import unpack
 
 
 class ArchiveExtractor(Karton):
@@ -59,7 +59,7 @@ class ArchiveExtractor(Karton):
             if task_password is not None:
                 archive_password = task_password.encode()
 
-            unpacked = sflock.unpack(
+            unpacked = unpack(
                 filename=fname,
                 filepath=filepath.encode("utf-8"),
                 password=archive_password,

@@ -15,7 +15,13 @@ setup(
     version=version_info["__version__"],
     description="Extractor of various archive formats for Karton framework",
     namespace_packages=["karton"],
-    packages=["karton.archive_extractor"],
+    packages=[
+        "karton.archive_extractor",
+        "karton.archive_extractor.sflock",
+        "karton.archive_extractor.sflock.unpack",
+        "karton.archive_extractor.sflock.data",
+    ],
+    include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),
     entry_points={
         'console_scripts': [
