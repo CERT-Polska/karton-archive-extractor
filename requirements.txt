@@ -1,1 +1,7 @@
 karton.core==4.0.0-dev3
+click==6.6
+cryptography>=2.1
+olefile==0.43
+peepdf>=0.4.1
+python-magic==0.4.12
+six
