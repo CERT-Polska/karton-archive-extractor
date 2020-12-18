@@ -1,8 +1,8 @@
 import tempfile
 
 from karton.core import Karton, Resource, Task
-from .__version__ import __version__
 
+from .__version__ import __version__
 from .sflock import unpack
 
 
@@ -101,9 +101,7 @@ class ArchiveExtractor(Karton):
                     "quality": self.current_task.headers.get("quality", "high"),
                 },
                 payload={
-                    "sample": Resource(
-                        fname, child.contents
-                    ),
+                    "sample": Resource(fname, child.contents),
                     "parent": sample,
                     "extraction_level": extraction_level + 1,
                 },
