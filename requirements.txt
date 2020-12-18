@@ -1,4 +1,4 @@
-karton.core==4.0.3
+karton-core==4.0.3
 click==6.6
 cryptography>=2.1
 olefile==0.43
