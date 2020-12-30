@@ -56,6 +56,8 @@ class ZipFile(Unpacker):
                 return
             if "Bad magic number for" in msg:
                 return
+            if "compression type" in msg:
+                return
 
             raise UnpackException("Unknown zipfile error: %s" % e)
 
