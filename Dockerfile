@@ -14,4 +14,4 @@ COPY ./MANIFEST.in ./MANIFEST.in
 COPY ./karton ./karton
 COPY ./setup.py ./setup.py
 RUN pip install .
-CMD karton-archive-extractor
+ENTRYPOINT karton-archive-extractor
