@@ -58,7 +58,7 @@ $ karton-archive-extractor
 
 ## Running in Docker
 
-Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail) as a usermode syscall filtering mechanism. As a result, the karton service has to be able to use `ptrace` so ensure that your container has `SYS_PTRACE` capability.
+Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail) as a usermode syscall filtering mechanism. As a result, in our experience, container running the karton service has to have the `SYS_PTRACE` capability in order for the ptrace to execute correctly. Make sure it's enabled if you run into problems extracting certain archive types.
 
 ---
 
