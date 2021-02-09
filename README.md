@@ -37,7 +37,7 @@ Performs extraction of known archive types and e-mail attachments. Produces "raw
 
 First of all, make sure you have setup the core system: https://github.com/CERT-Polska/karton
 
-In order to unpack all available formats you'll also need a few native dependencies that sflock relies on, so make sure you install them with:
+In order to unpack all available formats you'll also need a few native dependencies that sflock relies on, the installation method recommended by sflock is:
 ```shell
 RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list \
     && apt-get update && apt-get install -y \
