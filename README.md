@@ -60,6 +60,38 @@ $ karton-archive-extractor
 
 Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail) as a usermode syscall filtering mechanism. As a result, in our experience, container running the karton service has to have the `SYS_PTRACE` capability in order for the ptrace to execute correctly. Make sure it's enabled if you run into problems extracting certain archive types.
 
+## Supported archive/compression formats*
+
+```
+.7z
+.ace
+.bup
+.cab
+.daa
+.eml
+.gz
+.gzip
+.iso
+.lha
+.lz
+.lzh
+.msg
+.mso
+.pdf
+.rar
+.tar
+.tar.bz2
+.tar.gz
+.udf
+.vhd
+.vhdx
+.xz
+.zip
+```
+
+\* Assuming you are running Linux, please see the [sflock's readme](https://github.com/CERT-Polska/karton-archive-extractor/blob/master/karton/archive_extractor/sflock/README.md) for more information
+
+
 ---
 
 ![Co-financed by the Connecting Europe Facility by of the European Union](https://www.cert.pl/wp-content/uploads/2019/02/en_horizontal_cef_logo-1.png)
