@@ -24,15 +24,15 @@ class ArchiveExtractor(Karton):
         {"type": "sample", "stage": "recognized", "kind": "archive"},
     ]
 
-    def process(self) -> None:
-        sample = self.current_task.get_payload("sample")
-        task_password = self.current_task.get_payload("password", default=None)
+    def process(self, task: Task) -> None:
+        sample = task.get_resource("sample")
+        task_password = task.get_payload("password", default=None)
 
         try:
             if sample.name:
                 fname = sample.name.encode("utf8")
 
-                classifier_extension = "." + self.current_task.headers.get("extension")
+                classifier_extension = "." + task.headers.get("extension")
                 if classifier_extension and not fname.endswith(
                     classifier_extension.encode("utf-8")
                 ):
@@ -42,7 +42,7 @@ class ArchiveExtractor(Karton):
             self.log.warning("Exception during extraction: %r", e)
             fname = None
 
-        extraction_level = self.current_task.get_payload("extraction_level", 0)
+        extraction_level = task.get_payload("extraction_level", 0)
 
         if extraction_level > self.max_depth:
             self.log.warning(
@@ -98,7 +98,7 @@ class ArchiveExtractor(Karton):
                 headers={
                     "type": "sample",
                     "kind": "raw",
-                    "quality": self.current_task.headers.get("quality", "high"),
+                    "quality": task.headers.get("quality", "high"),
                 },
                 payload={
                     "sample": Resource(fname, child.contents),
