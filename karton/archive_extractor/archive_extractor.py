@@ -27,6 +27,11 @@ class ArchiveExtractor(Karton):
     def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
         task_password = task.get_payload("password", default=None)
+        
+        attributes_password = task.get_payload("attributes", default=None)
+        if not task_password and attributes_password and "password" in attributes_password:
+            self.log.info("Taking password from attributes")
+            task_password = (attributes_password["password"] or [None])[0]
 
         try:
             if sample.name:
