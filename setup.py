@@ -13,7 +13,10 @@ exec(version_path.read_text(), version_info)
 setup(
     name="karton-archive-extractor",
     version=version_info["__version__"],
+    url="https://github.com/CERT-Polska/karton-archive-extractor/",
     description="Extractor of various archive formats for Karton framework",
+    long_description=open("README.md", "r").read(),
+    long_description_content_type="text/markdown",
     namespace_packages=["karton"],
     packages=[
         "karton.archive_extractor",
