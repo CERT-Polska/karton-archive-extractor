@@ -20,11 +20,6 @@ setup(
     namespace_packages=["karton"],
     packages=[
         "karton.archive_extractor",
-        "karton.archive_extractor.sflock",
-        "karton.archive_extractor.sflock.unpack",
-        "karton.archive_extractor.sflock.decode",
-        "karton.archive_extractor.sflock.compat",
-        "karton.archive_extractor.sflock.data",
     ],
     include_package_data=True,
     install_requires=open("requirements.txt").read().splitlines(),

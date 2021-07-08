@@ -1,9 +1,9 @@
 import tempfile
 
 from karton.core import Karton, Resource, Task
+from sflock import unpack
 
 from .__version__ import __version__
-from .sflock import unpack
 
 
 class ArchiveExtractor(Karton):

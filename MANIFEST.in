@@ -1,11 +1,2 @@
 graft karton/archive_extractor
 recursive-exclude * *.pyc *.pyo
-include karton/archive_extractor/sflock/data/password.txt
-include karton/archive_extractor/sflock/data/win32/magic1.dll
-include karton/archive_extractor/sflock/data/win32/magic.mgc
-include karton/archive_extractor/sflock/data/win32/regex2.dll
-include karton/archive_extractor/sflock/data/win32/zlib1.dll
-include karton/archive_extractor/sflock/data/win64/libgnurx-0.dll
-include karton/archive_extractor/sflock/data/win64/magic1.dll
-include karton/archive_extractor/sflock/data/win64/magic.mgc
-include karton/archive_extractor/sflock/data/zipjail.elf
