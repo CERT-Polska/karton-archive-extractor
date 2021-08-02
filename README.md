@@ -89,7 +89,7 @@ Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail)
 .zip
 ```
 
-\* Assuming you are running Linux, please see the [sflock's readme](https://github.com/CERT-Polska/karton-archive-extractor/blob/master/karton/archive_extractor/sflock/README.md) for more information
+\* Assuming you are running Linux, please see the [sflock's readme](https://github.com/doomedraven/sflock/blob/master/README.md) for more information
 
 
 ---
