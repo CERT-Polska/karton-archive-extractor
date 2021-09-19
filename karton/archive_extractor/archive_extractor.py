@@ -17,7 +17,7 @@ class ArchiveExtractor(Karton):
     # Maximum unpacked child filesize, larger files are not reported
     max_size = 25 * 1024 * 1024
     # Maximum number of childs for further analysis
-    max_childs = 1000
+    max_children = 1000
 
     identity = "karton.archive-extractor"
     version = __version__
@@ -86,8 +86,8 @@ class ArchiveExtractor(Karton):
             self.log.warning("Don't know how to unpack this archive")
             return
 
-        if len(unpacked.children) > self.max_childs:
-            self.log.warning("Too many childs for further processing")
+        if len(unpacked.children) > self.max_children:
+            self.log.warning("Too many children for further processing")
             return
 
         for child in unpacked.children:
