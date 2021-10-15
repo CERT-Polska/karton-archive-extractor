@@ -29,7 +29,7 @@ class ArchiveExtractor(Karton):
     def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
         task_password = task.get_payload("password", default=None)
-        
+
         attributes = task.get_payload("attributes", default={})
         if not task_password and attributes.get("password"):
             self.log.info("Accepting password from attributes")
@@ -64,7 +64,7 @@ class ArchiveExtractor(Karton):
 
             archive_password = None
             if task_password is not None:
-                archive_password = task_password.encode()
+                archive_password = task_password
 
             unpacked = unpack(
                 filename=fname,
