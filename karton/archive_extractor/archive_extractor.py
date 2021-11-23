@@ -66,11 +66,16 @@ class ArchiveExtractor(Karton):
             if task_password is not None:
                 archive_password = task_password
 
-            unpacked = unpack(
-                filename=fname,
-                filepath=filepath.encode("utf-8"),
-                password=archive_password,
-            )
+            try:
+                unpacked = unpack(
+                    filename=fname,
+                    filepath=filepath.encode("utf-8"),
+                    password=archive_password,
+                )
+            except Exception as e:
+                # we can't really do anything about corrupted archives :(
+                self.log.warning("Error while unpacking archive: %s", e)
+                return
 
         try:
             fname = (
