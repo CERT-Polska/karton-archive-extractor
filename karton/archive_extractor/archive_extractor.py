@@ -1,7 +1,7 @@
 import tempfile
 
 from karton.core import Karton, Resource, Task
-from sflock import unpack
+from sflock import unpack  # type: ignore
 
 from .__version__ import __version__
 
@@ -26,7 +26,7 @@ class ArchiveExtractor(Karton):
         {"type": "sample", "stage": "recognized", "kind": "archive"},
     ]
 
-    def process(self, task: Task) -> None:
+    def process(self, task: Task) -> None:  # type: ignore
         sample = task.get_resource("sample")
         task_password = task.get_payload("password", default=None)
 
@@ -37,17 +37,14 @@ class ArchiveExtractor(Karton):
 
         try:
             if sample.name:
-                fname = sample.name.encode("utf8")
+                fname = sample.name
 
-                classifier_extension = "." + task.headers.get("extension")
-                if classifier_extension and not fname.endswith(
-                    classifier_extension.encode("utf-8")
-                ):
-                    fname += classifier_extension.encode("utf-8")
-
+                classifier_extension = "." + task.headers["extension"]
+                if classifier_extension and not fname.endswith(classifier_extension):
+                    fname += classifier_extension
         except Exception as e:
             self.log.warning("Exception during extraction: %r", e)
-            fname = None
+            fname = "archive"
 
         extraction_level = task.get_payload("extraction_level", 0)
 
