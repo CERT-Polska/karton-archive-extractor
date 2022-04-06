@@ -63,13 +63,9 @@ class ArchiveExtractor(Karton):
             if task_password is not None:
                 archive_password = task_password
 
-            # sflock gets very angry if the filename isn't bytes, for some reason
-            if type(fname) is str:
-                fname = fname.encode()
-
             try:
                 unpacked = unpack(
-                    filename=fname,
+                    filename=fname.encode("utf-8"),
                     filepath=filepath.encode("utf-8"),
                     password=archive_password,
                 )
