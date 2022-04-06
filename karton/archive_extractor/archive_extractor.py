@@ -19,9 +19,9 @@ class ArchiveExtractor(Karton):
     # Maximum number of childs for further analysis
     max_children = 1000
 
-    identity = "karton.archive-extractor-nazywam-dev"
+    identity = "karton.archive-extractor"
     version = __version__
-    persistent = False
+    persistent = True
     filters = [
         {"type": "sample", "stage": "recognized", "kind": "archive"},
     ]
@@ -65,7 +65,7 @@ class ArchiveExtractor(Karton):
 
             # sflock gets very angry if the filename isn't bytes, for some reason
             if type(fname) is str:
-                fname = fname.encode()
+                `fname` = fname.encode()
 
             try:
                 unpacked = unpack(
