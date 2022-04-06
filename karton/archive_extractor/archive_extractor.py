@@ -65,7 +65,7 @@ class ArchiveExtractor(Karton):
 
             # sflock gets very angry if the filename isn't bytes, for some reason
             if type(fname) is str:
-                `fname` = fname.encode()
+                fname = fname.encode()
 
             try:
                 unpacked = unpack(
