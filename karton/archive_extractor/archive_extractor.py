@@ -65,7 +65,7 @@ class ArchiveExtractor(Karton):
 
             try:
                 unpacked = unpack(
-                    filename=fname,
+                    filename=fname.encode("utf-8"),
                     filepath=filepath.encode("utf-8"),
                     password=archive_password,
                 )
