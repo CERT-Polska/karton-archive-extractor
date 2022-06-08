@@ -35,6 +35,7 @@ class ArchiveExtractor(Karton):
             self.log.info("Accepting password from attributes")
             task_password = attributes.get("password")[0]
 
+        fname = "archive"
         try:
             if sample.name:
                 fname = sample.name
@@ -44,7 +45,6 @@ class ArchiveExtractor(Karton):
                     fname += classifier_extension
         except Exception as e:
             self.log.warning("Exception during extraction: %r", e)
-            fname = "archive"
 
         extraction_level = task.get_payload("extraction_level", 0)
 
