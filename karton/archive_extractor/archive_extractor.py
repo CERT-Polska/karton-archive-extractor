@@ -26,7 +26,7 @@ class ArchiveExtractor(Karton):
         {"type": "sample", "stage": "recognized", "kind": "archive"},
     ]
 
-    def process(self, task: Task) -> None:  # type: ignore
+    def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
         task_password = task.get_payload("password", default=None)
 

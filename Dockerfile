@@ -1,4 +1,4 @@
-FROM python:3.7
+FROM python:3.9
 RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list \
     && apt-get update && apt-get install -y \
     p7zip-full \
