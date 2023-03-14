@@ -4,7 +4,7 @@ Performs extraction of known archive types and e-mail attachments. Produces "raw
 
 **Author**: CERT.pl
 
-**Maintainers**: psrok1, nazywam, msm
+**Maintainers**: psrok1, nazywam
 
 **Consumes:**
 ```
@@ -15,8 +15,9 @@ Performs extraction of known archive types and e-mail attachments. Produces "raw
     "payload": {
         "sample": <Resource>,
         "extraction_level": <int, default: 0>,
+        "password": <archive password>,
     }
-} 
+}
 ```
 
 **Produces:**
