@@ -2,3 +2,5 @@ karton.ini
 venv
 .idea/
 __pycache__/
+build
+*egg-info/
