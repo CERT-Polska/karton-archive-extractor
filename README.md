@@ -57,6 +57,22 @@ $ pip install karton-archive-extractor
 $ karton-archive-extractor
 ```
 
+### Configuration
+
+There are several configuration options you can tweak up to your liking.
+
+```ini
+[archive-extractor]
+# Maximum levels of nested extraction
+max_depth = 5
+# Maximum unpacked child filesize, larger files are not reported
+max_size = 26214400
+# Maximum number of children files for further analysis
+max_children = 1000
+```
+
+To learn more about configuring your karton services, take a look at [karton configuration docs](https://karton-core.readthedocs.io/en/latest/service_configuration.html)
+
 ## Running in Docker
 
 Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail) as a usermode syscall filtering mechanism. As a result, in our experience, container running the karton service has to have the `SYS_PTRACE` capability in order for the ptrace to execute correctly. Make sure it's enabled if you run into problems extracting certain archive types.

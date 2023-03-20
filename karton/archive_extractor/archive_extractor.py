@@ -1,6 +1,9 @@
 import tempfile
+from typing import Optional
 
 from karton.core import Karton, Resource, Task
+from karton.core.backend import KartonBackend
+from karton.core.config import Config
 from sflock import unpack  # type: ignore
 
 from .__version__ import __version__
@@ -12,19 +15,33 @@ class ArchiveExtractor(Karton):
     Produces "raw" artifacts for further classification.
     """
 
-    # Maximum levels of nested extraction
-    max_depth = 5
-    # Maximum unpacked child filesize, larger files are not reported
-    max_size = 25 * 1024 * 1024
-    # Maximum number of childs for further analysis
-    max_children = 1000
-
     identity = "karton.archive-extractor"
     version = __version__
     persistent = True
     filters = [
         {"type": "sample", "stage": "recognized", "kind": "archive"},
     ]
+
+    def __init__(
+        self,
+        config: Optional[Config] = None,
+        identity: Optional[str] = None,
+        backend: Optional[KartonBackend] = None,
+    ) -> None:
+        super().__init__(config=config, identity=identity, backend=backend)
+
+        # Maximum levels of nested extraction
+        self.max_depth = self.config.getint(
+            "archive-extractor", "max_depth", fallback=5
+        )
+        # Maximum unpacked child filesize, larger files are not reported
+        self.max_size = self.config.getint(
+            "archive-extractor", "max_size", fallback=25 * 1024 * 1024
+        )
+        # Maximum number of children files for further analysis
+        self.max_children = self.config.getint(
+            "archive-extractor", "max_children", fallback=1000
+        )
 
     def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
