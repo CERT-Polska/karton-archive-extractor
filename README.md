@@ -108,6 +108,17 @@ Sflock uses [ZipJail](https://github.com/hatching/tracy/tree/master/src/zipjail)
 
 \* Assuming you are running Linux, please see the [sflock's readme](https://github.com/doomedraven/sflock/blob/master/README.md) for more information
 
+## PE files debloating
+
+Some malicious PE files has intentionally added junk to make them too big for processing. Starting from v1.4.0, archive extractor 
+supports optional debloating of these files, using [debloat tool made by Squiblydoo](https://github.com/Squiblydoo/debloat). 
+
+`certpl/karton-archive-extractor` Docker image debloats PE files by default. To enable debloating in 
+karton-archive-extractor installed from PyPi, you need to install additional extra dependencies:
+
+```
+pip install karton-archive-extractor[debloat]
+```
 
 ---
 

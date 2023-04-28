@@ -8,6 +8,14 @@ from sflock import unpack  # type: ignore
 
 from .__version__ import __version__
 
+try:
+    import pefile
+    from debloat.processor import process_pe
+
+    HAS_DEBLOAT = True
+except ImportError:
+    HAS_DEBLOAT = False
+
 
 class ArchiveExtractor(Karton):
     """
@@ -42,6 +50,31 @@ class ArchiveExtractor(Karton):
         self.max_children = self.config.getint(
             "archive-extractor", "max_children", fallback=1000
         )
+
+    def debloat_pe(self, child_contents: bytes) -> Optional[bytes]:
+        if HAS_DEBLOAT is False:
+            self.log.info(
+                "Child looks like bloated PE file, but debloat is not installed."
+            )
+            return None
+
+        try:
+            pe = pefile.PE(data=child_contents)
+        except Exception:
+            self.log.warning("Failed to load as PE file.")
+            return None
+
+        with tempfile.NamedTemporaryFile() as f:
+            process_pe(
+                pe, out_path=f.name, unsafe_processing=False, log_message=self.log.info
+            )
+            processed = f.read()
+
+        if processed:
+            return processed
+        else:
+            self.log.warning("Output file is empty - failed to debloat file")
+            return None
 
     def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
@@ -123,7 +156,18 @@ class ArchiveExtractor(Karton):
                 continue
 
             if len(child.contents) > self.max_size:
-                self.log.warning("Child is too big for further processing")
+                if child.contents[:2] == b"MZ":
+                    debloated = self.debloat_pe(child.contents)
+                    if debloated is not None:
+                        child.contents = debloated
+
+            # Is it still too big?
+            if len(child.contents) > self.max_size:
+                self.log.warning(
+                    "Child is too big for further processing (%d > %d)",
+                    len(child.contents),
+                    self.max_size,
+                )
                 continue
 
             task = Task(
