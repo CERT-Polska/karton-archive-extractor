@@ -9,8 +9,8 @@ from sflock import unpack  # type: ignore
 from .__version__ import __version__
 
 try:
-    import pefile
-    from debloat.processor import process_pe
+    import pefile  # type: ignore
+    from debloat.processor import process_pe  # type: ignore
 
     HAS_DEBLOAT = True
 except ImportError:
