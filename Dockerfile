@@ -8,8 +8,9 @@ RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list \
     lzip
 
 WORKDIR /app/service
-COPY ./requirements.txt ./requirements.txt
+COPY ./requirements.txt ./requirements-debloat.txt ./
 RUN pip install -r requirements.txt
+RUN pip install --no-deps -r requirements-debloat.txt
 COPY ./README.md ./README.md
 COPY ./MANIFEST.in ./MANIFEST.in
 COPY ./karton ./karton
