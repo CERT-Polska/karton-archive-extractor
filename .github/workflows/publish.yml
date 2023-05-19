@@ -3,11 +3,9 @@ on:
   push:
     branches:
     - master
-    - ci/*
   pull_request:
     branches:
     - master
-    - ci/*
 jobs:
   build_core:
     name: Build image
