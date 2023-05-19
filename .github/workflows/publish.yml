@@ -3,17 +3,16 @@ on:
   push:
     branches:
     - master
-    - ci/*
   pull_request:
     branches:
     - master
-    - ci/*
 jobs:
   build_core:
     name: Build image
     runs-on: ubuntu-latest
     env:
       DOCKER_BUILDKIT: 1
+      # Flux v1 doesn't support OCI-compliant manifests
       BUILDX_NO_DEFAULT_ATTESTATIONS: 1
     steps:
       - name: Check out repository
