@@ -3,15 +3,18 @@ on:
   push:
     branches:
     - master
+    - ci/*
   pull_request:
     branches:
     - master
+    - ci/*
 jobs:
   build_core:
     name: Build image
     runs-on: ubuntu-latest
     env:
       DOCKER_BUILDKIT: 1
+      BUILDX_NO_DEFAULT_ATTESTATIONS: 1
     steps:
       - name: Check out repository
         uses: actions/checkout@v2
