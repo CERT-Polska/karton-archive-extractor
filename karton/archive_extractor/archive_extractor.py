@@ -155,17 +155,19 @@ class ArchiveExtractor(Karton):
                 )
                 continue
 
-            if len(child.contents) > self.max_size:
-                if child.contents[:2] == b"MZ":
-                    debloated = self.debloat_pe(child.contents)
+            contents = child.contents
+
+            if len(contents) > self.max_size:
+                if contents[:2] == b"MZ":
+                    debloated = self.debloat_pe(contents)
                     if debloated is not None:
-                        child.contents = debloated
+                        contents = debloated
 
             # Is it still too big?
-            if len(child.contents) > self.max_size:
+            if len(contents) > self.max_size:
                 self.log.warning(
                     "Child is too big for further processing (%d > %d)",
-                    len(child.contents),
+                    len(contents),
                     self.max_size,
                 )
                 continue
@@ -177,7 +179,7 @@ class ArchiveExtractor(Karton):
                     "quality": task.headers.get("quality", "high"),
                 },
                 payload={
-                    "sample": Resource(fname, child.contents),
+                    "sample": Resource(fname, contents),
                     "parent": sample,
                     "extraction_level": extraction_level + 1,
                 },
