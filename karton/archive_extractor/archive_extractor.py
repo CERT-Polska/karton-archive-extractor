@@ -52,6 +52,9 @@ class ArchiveExtractor(Karton):
         )
 
     def debloat_pe(self, child_contents: bytes) -> Optional[bytes]:
+        def log_message_wrapped(message: str, *args, **kwargs) -> None:
+            self.log.info(message)
+
         if HAS_DEBLOAT is False:
             self.log.info(
                 "Child looks like bloated PE file, but debloat is not installed."
@@ -66,7 +69,10 @@ class ArchiveExtractor(Karton):
 
         with tempfile.NamedTemporaryFile() as f:
             process_pe(
-                pe, out_path=f.name, unsafe_processing=False, log_message=self.log.info
+                pe,
+                out_path=f.name,
+                unsafe_processing=False,
+                log_message=log_message_wrapped,
             )
             processed = f.read()
 
