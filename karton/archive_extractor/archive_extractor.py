@@ -52,7 +52,9 @@ class ArchiveExtractor(Karton):
             "archive-extractor", "max_children", fallback=1000
         )
 
-    def debloat_pe(self, filename: str, child_contents: bytes) -> Optional[Tuple[str, bytes]]:
+    def debloat_pe(
+        self, filename: str, child_contents: bytes
+    ) -> Optional[Tuple[str, bytes]]:
         def log_message_wrapped(message: str, *args, **kwargs) -> None:
             self.log.info(message)
 
