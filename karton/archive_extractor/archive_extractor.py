@@ -1,4 +1,5 @@
 import tempfile
+import os.path
 from typing import Optional
 
 from karton.core import Karton, Resource, Task
@@ -67,14 +68,17 @@ class ArchiveExtractor(Karton):
             self.log.warning("Failed to load as PE file.")
             return None
 
-        with tempfile.NamedTemporaryFile() as f:
+        # we need to use a whole directory because debloat can implicitly unpack NSIS to upper dir
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_file = os.path.join(tmp_dir, "archive_data")
+
             process_pe(
                 pe,
-                out_path=f.name,
+                out_path=temp_file,
                 unsafe_processing=False,
                 log_message=log_message_wrapped,
             )
-            processed = f.read()
+            processed = temp_file.read()
 
         if processed:
             return processed
