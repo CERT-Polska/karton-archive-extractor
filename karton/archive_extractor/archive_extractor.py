@@ -88,7 +88,7 @@ class ArchiveExtractor(Karton):
                 unpacked_file = Path(tmp_dir) / f_name
 
                 if unpacked_file.exists() and unpacked_file.stat().st_size:
-                    return (f_name, unpacked_file.get_bytes())
+                    return (f_name, unpacked_file.read_bytes())
 
         self.log.warning("Output file is empty - failed to debloat file")
         return None
