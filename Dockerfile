@@ -1,5 +1,5 @@
-FROM python:3.9
-RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list \
+FROM python:3.10
+RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list.d/debian.sources \
     && apt-get update && apt-get install -y \
     p7zip-full \
     rar \
