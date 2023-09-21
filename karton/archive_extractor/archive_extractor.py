@@ -1,5 +1,6 @@
 import tempfile
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Tuple
 
 from karton.core import Karton, Resource, Task
 from karton.core.backend import KartonBackend
@@ -51,7 +52,9 @@ class ArchiveExtractor(Karton):
             "archive-extractor", "max_children", fallback=1000
         )
 
-    def debloat_pe(self, child_contents: bytes) -> Optional[bytes]:
+    def debloat_pe(
+        self, filename: str, child_contents: bytes
+    ) -> Optional[Tuple[str, bytes]]:
         def log_message_wrapped(message: str, *args, **kwargs) -> None:
             self.log.info(message)
 
@@ -67,20 +70,28 @@ class ArchiveExtractor(Karton):
             self.log.warning("Failed to load as PE file.")
             return None
 
-        with tempfile.NamedTemporaryFile() as f:
+        # we need to use a temporary directory because debloat can implicitly unpack
+        # NSIS archives to parent directory of the passed file
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            temp_file = Path(tmp_dir) / filename
+
             process_pe(
                 pe,
-                out_path=f.name,
-                unsafe_processing=False,
+                out_path=temp_file.as_posix(),
+                last_ditch_processing=False,
                 log_message=log_message_wrapped,
             )
-            processed = f.read()
 
-        if processed:
-            return processed
-        else:
-            self.log.warning("Output file is empty - failed to debloat file")
-            return None
+            # debloat can sometimes unpack NSIS installer archives but we're interested
+            # only in the installer script
+            for f_name in (filename, "Setup.NSIS"):
+                unpacked_file = Path(tmp_dir) / f_name
+
+                if unpacked_file.exists() and unpacked_file.stat().st_size:
+                    return (f_name, unpacked_file.read_bytes())
+
+        self.log.warning("Output file is empty - failed to debloat file")
+        return None
 
     def process(self, task: Task) -> None:
         sample = task.get_resource("sample")
@@ -165,9 +176,9 @@ class ArchiveExtractor(Karton):
 
             if len(contents) > self.max_size:
                 if contents[:2] == b"MZ":
-                    debloated = self.debloat_pe(contents)
+                    debloated = self.debloat_pe(fname, contents)
                     if debloated is not None:
-                        contents = debloated
+                        fname, contents = debloated
 
             # Is it still too big?
             if len(contents) > self.max_size:
