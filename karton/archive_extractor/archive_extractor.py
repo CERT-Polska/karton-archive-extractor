@@ -84,11 +84,12 @@ class ArchiveExtractor(Karton):
 
             # debloat can sometimes unpack NSIS installer archives but we're interested
             # only in the installer script
-            for f_name in (filename, "Setup.NSIS"):
-                unpacked_file = Path(tmp_dir) / f_name
+            for unpacked_file in Path(tmp_dir).rglob("*"):
+                if unpacked_file.is_dir():
+                    continue
 
-                if unpacked_file.exists() and unpacked_file.stat().st_size:
-                    return (f_name, unpacked_file.read_bytes())
+                if unpacked_file.name == filename or unpacked_file.name.lower() == "setup.nsis":
+                    return (unpacked_file.name, unpacked_file.read_bytes())
 
         self.log.warning("Output file is empty - failed to debloat file")
         return None
