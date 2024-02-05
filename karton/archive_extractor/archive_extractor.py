@@ -88,7 +88,10 @@ class ArchiveExtractor(Karton):
                 if unpacked_file.is_dir():
                     continue
 
-                if unpacked_file.name == filename or unpacked_file.name.lower() == "setup.nsis":
+                if (
+                    unpacked_file.name == filename
+                    or unpacked_file.name.lower() == "setup.nsis"
+                ):
                     return (unpacked_file.name, unpacked_file.read_bytes())
 
         self.log.warning("Output file is empty - failed to debloat file")
