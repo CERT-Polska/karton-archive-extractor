@@ -52,6 +52,12 @@ class ArchiveExtractor(Karton):
             "archive-extractor", "max_children", fallback=1000
         )
 
+        # Payloads to propagate to new tasks
+        self.payloads_to_propagate = {}
+        if self.config.has_section("archive-extractor-payload-propagation"):
+            for k, v in self.config["archive-extractor-payload-propagation"].items():
+                self.payloads_to_propagate[k] = v
+
     def debloat_pe(
         self, filename: str, child_contents: bytes
     ) -> Optional[Tuple[str, bytes]]:
@@ -193,7 +199,7 @@ class ArchiveExtractor(Karton):
                 )
                 continue
 
-            task = Task(
+            new_task = Task(
                 headers={
                     "type": "sample",
                     "kind": "raw",
@@ -205,4 +211,11 @@ class ArchiveExtractor(Karton):
                     "extraction_level": extraction_level + 1,
                 },
             )
-            self.send_task(task)
+
+            for name, persistent in self.payloads_to_propagate.items():
+                payload = task.get_payload(name)
+                if payload is not None:
+                    self.log.info(f"Propagating payload {name} to new task")
+                    new_task.add_payload(name, payload, persistent=persistent)
+
+            self.send_task(new_task)
