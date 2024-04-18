@@ -69,6 +69,12 @@ max_depth = 5
 max_size = 26214400
 # Maximum number of children files for further analysis
 max_children = 1000
+
+# Specify which payloads are to be propagated to new tasks,
+# takes the form payload_name = payload_persistent
+[archive-extractor-payload-propagation]
+ext_origin_id = True
+ext_source_id = False
 ```
 
 To learn more about configuring your karton services, take a look at [karton configuration docs](https://karton-core.readthedocs.io/en/latest/service_configuration.html)
