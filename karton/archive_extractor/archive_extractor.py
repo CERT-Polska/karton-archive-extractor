@@ -77,7 +77,7 @@ class ArchiveExtractor(Karton):
 
             process_pe(
                 pe,
-                cert_preservation=True,
+                cert_preservation=False,
                 out_path=temp_file.as_posix(),
                 last_ditch_processing=False,
                 log_message=log_message_wrapped,
