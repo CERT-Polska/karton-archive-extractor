@@ -1,3 +1,4 @@
+import functools
 import mmap
 import os
 import tempfile
@@ -7,8 +8,9 @@ from typing import IO, Optional, Tuple, cast
 from karton.core import Karton, RemoteResource, Resource, Task
 from karton.core.backend import KartonBackend
 from karton.core.config import Config
-from sflock import unpack  # type: ignore
 from sflock.abstracts import File as SFLockFile  # type: ignore
+from sflock.abstracts import Unpacker
+from sflock.unpack.zip7 import ZipFile as SFLockZipFile  # type: ignore
 
 from .__version__ import __version__
 
@@ -19,6 +21,24 @@ try:
     HAS_DEBLOAT = True
 except ImportError:
     HAS_DEBLOAT = False
+
+
+@functools.wraps(SFLockZipFile.handles)
+def zip_handles(self: SFLockZipFile) -> bool:
+    if (
+        hasattr(self.f, "filename")
+        and self.f.filename
+        and self.f.filename.endswith(self.exts)
+    ):
+        return True
+    if super(SFLockZipFile, self).handles():
+        return True
+    if self.f.stream.read(2) == b"PK":
+        return True
+    return False
+
+
+SFLockZipFile.handles = zip_handles
 
 
 class ArchiveExtractor(Karton):
@@ -130,6 +150,8 @@ class ArchiveExtractor(Karton):
         except Exception as e:
             self.log.warning("Exception during extraction: %r", e)
 
+        self.log.info("Got archive {}".format(fname))
+
         extraction_level = task.get_payload("extraction_level", 0)
 
         if extraction_level > self.max_depth:
@@ -144,79 +166,76 @@ class ArchiveExtractor(Karton):
                 archive_password = task_password
 
             try:
-                unpacked = unpack(
-                    filename=fname.encode("utf-8"),
+                sflock_file = SFLockFile.from_path(
                     filepath=archive_file.name.encode("utf-8"),
-                    password=archive_password,
+                    filename=fname.encode("utf-8"),
                 )
+                Unpacker.single(sflock_file, password=archive_password, duplicates=None)
+                unpacked = sflock_file
             except Exception as e:
                 # we can't really do anything about corrupted archives :(
                 self.log.warning("Error while unpacking archive: %s", e)
                 return
 
         try:
-            fname = (
-                unpacked.filename and unpacked.filename.decode("utf8")
-            ) or unpacked.sha256
-        except Exception as e:
-            self.log.warning("Exception during extraction: %r", e)
-            fname = "(unknown)"
+            if not unpacked.children:
+                self.log.warning("Don't know how to unpack this archive")
+                return
 
-        self.log.info("Got archive {}".format(fname))
+            if len(unpacked.children) > self.max_children:
+                self.log.warning("Too many children for further processing")
+                return
 
-        if not unpacked.children:
-            self.log.warning("Don't know how to unpack this archive")
-            return
+            for child in unpacked.children:
+                fname = (
+                    child.filename and child.filename.decode("utf8")
+                ) or child.sha256
 
-        if len(unpacked.children) > self.max_children:
-            self.log.warning("Too many children for further processing")
-            return
+                self.log.info("Unpacked child {}".format(fname))
 
-        for child in unpacked.children:
-            fname = (child.filename and child.filename.decode("utf8")) or child.sha256
+                header = child.stream.read(4096)
 
-            self.log.info("Unpacked child {}".format(fname))
+                if not header:
+                    self.log.warning(
+                        "Child has no contents or protected by unknown password"
+                    )
+                    continue
 
-            header = child.header
+                stream = child.stream
 
-            if not header:
-                self.log.warning(
-                    "Child has no contents or protected by unknown password"
+                if child.filesize > self.max_size:
+                    if header[:2] == b"MZ":
+                        debloated = self.debloat_pe(fname, child)
+                        if debloated is not None:
+                            fname, stream = debloated
+
+                # Is it still too big?
+                stream.seek(0, os.SEEK_END)
+                stream_size = stream.tell()
+                stream.seek(0, os.SEEK_SET)
+
+                if stream_size > self.max_size:
+                    self.log.warning(
+                        "Child is too big for further processing (%d > %d)",
+                        stream_size,
+                        self.max_size,
+                    )
+                    continue
+
+                resource = Resource(name=fname, fd=stream)
+                task = Task(
+                    headers={
+                        "type": "sample",
+                        "kind": "raw",
+                        "quality": task.headers.get("quality", "high"),
+                    },
+                    payload={
+                        "sample": resource,
+                        "parent": sample,
+                        "extraction_level": extraction_level + 1,
+                    },
                 )
-                continue
-
-            stream = child.stream
-
-            if child.filesize > self.max_size:
-                if header[:2] == b"MZ":
-                    debloated = self.debloat_pe(fname, child)
-                    if debloated is not None:
-                        fname, stream = debloated
-
-            # Is it still too big?
-            stream.seek(0, os.SEEK_END)
-            stream_size = stream.tell()
-            stream.seek(0, os.SEEK_SET)
-
-            if stream.size > self.max_size:
-                self.log.warning(
-                    "Child is too big for further processing (%d > %d)",
-                    stream_size,
-                    self.max_size,
-                )
-                continue
-
-            resource = Resource(name=fname, fd=stream, _close_fd=True)
-            task = Task(
-                headers={
-                    "type": "sample",
-                    "kind": "raw",
-                    "quality": task.headers.get("quality", "high"),
-                },
-                payload={
-                    "sample": resource,
-                    "parent": sample,
-                    "extraction_level": extraction_level + 1,
-                },
-            )
-            self.send_task(task)
+                self.send_task(task)
+                stream.close()
+        finally:
+            unpacked.close()
