@@ -1,11 +1,14 @@
+import mmap
+import os
 import tempfile
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import IO, Optional, Tuple, cast
 
-from karton.core import Karton, Resource, Task
+from karton.core import Karton, RemoteResource, Resource, Task
 from karton.core.backend import KartonBackend
 from karton.core.config import Config
 from sflock import unpack  # type: ignore
+from sflock.abstracts import File as SFLockFile  # type: ignore
 
 from .__version__ import __version__
 
@@ -53,8 +56,8 @@ class ArchiveExtractor(Karton):
         )
 
     def debloat_pe(
-        self, filename: str, child_contents: bytes
-    ) -> Optional[Tuple[str, bytes]]:
+        self, filename: str, child: SFLockFile
+    ) -> Optional[Tuple[str, IO[bytes]]]:
         def log_message_wrapped(message: str, *args, **kwargs) -> None:
             self.log.info(message)
 
@@ -64,48 +67,55 @@ class ArchiveExtractor(Karton):
             )
             return None
 
-        try:
-            pe = pefile.PE(data=child_contents)
-        except Exception:
-            self.log.warning("Failed to load as PE file.")
-            return None
+        with mmap.mmap(
+            child.stream.fileno(), 0, access=mmap.ACCESS_READ
+        ) as mapped_child:
+            try:
+                pe = pefile.PE(data=mapped_child)
+            except Exception:
+                self.log.warning("Failed to load as PE file.")
+                return None
 
-        # we need to use a temporary directory because debloat can implicitly unpack
-        # NSIS archives to parent directory of the passed file
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            temp_file = Path(tmp_dir) / filename
+            # we need to use a temporary directory because debloat can implicitly unpack
+            # NSIS archives to parent directory of the passed file
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                temp_file = Path(tmp_dir) / filename
 
-            process_pe(
-                pe,
-                cert_preservation=False,
-                out_path=temp_file.as_posix(),
-                last_ditch_processing=False,
-                log_message=log_message_wrapped,
-            )
+                process_pe(
+                    pe,
+                    cert_preservation=False,
+                    out_path=temp_file.as_posix(),
+                    last_ditch_processing=False,
+                    log_message=log_message_wrapped,
+                )
 
-            # debloat can sometimes unpack NSIS installer archives but we're interested
-            # only in the installer script
-            for unpacked_file in Path(tmp_dir).rglob("*"):
-                if unpacked_file.is_dir():
-                    continue
+                # debloat can sometimes unpack NSIS installer archives
+                # but we're interested only in the installer script
+                for unpacked_file in Path(tmp_dir).rglob("*"):
+                    if unpacked_file.is_dir():
+                        continue
 
-                if (
-                    unpacked_file.name == filename
-                    or unpacked_file.name.lower() == "setup.nsis"
-                ):
-                    return (unpacked_file.name, unpacked_file.read_bytes())
+                    if (
+                        unpacked_file.name == filename
+                        or unpacked_file.name.lower() == "setup.nsis"
+                    ):
+                        return unpacked_file.name, unpacked_file.open(mode="rb")
 
         self.log.warning("Output file is empty - failed to debloat file")
         return None
 
-    def process(self, task: Task) -> None:
-        sample = task.get_resource("sample")
+    def _get_password(self, task: Task) -> Optional[str]:
         task_password = task.get_payload("password", default=None)
 
         attributes = task.get_payload("attributes", default={})
         if not task_password and attributes.get("password"):
             self.log.info("Accepting password from attributes")
             task_password = attributes.get("password")[0]
+        return task_password
+
+    def process(self, task: Task) -> None:
+        sample = cast(RemoteResource, task.get_resource("sample"))
+        task_password = self._get_password(task)
 
         fname = "archive"
         try:
@@ -128,11 +138,7 @@ class ArchiveExtractor(Karton):
             )
             return
 
-        with tempfile.TemporaryDirectory() as dir_name:
-            filepath = f"{dir_name}/{fname}"
-            with open(filepath, "wb") as f:
-                f.write(sample.content)
-
+        with sample.download_temporary_file() as archive_file:
             archive_password = None
             if task_password is not None:
                 archive_password = task_password
@@ -140,7 +146,7 @@ class ArchiveExtractor(Karton):
             try:
                 unpacked = unpack(
                     filename=fname.encode("utf-8"),
-                    filepath=filepath.encode("utf-8"),
+                    filepath=archive_file.name.encode("utf-8"),
                     password=archive_password,
                 )
             except Exception as e:
@@ -171,29 +177,36 @@ class ArchiveExtractor(Karton):
 
             self.log.info("Unpacked child {}".format(fname))
 
-            if not child.contents:
+            header = child.header
+
+            if not header:
                 self.log.warning(
                     "Child has no contents or protected by unknown password"
                 )
                 continue
 
-            contents = child.contents
+            stream = child.stream
 
-            if len(contents) > self.max_size:
-                if contents[:2] == b"MZ":
-                    debloated = self.debloat_pe(fname, contents)
+            if child.filesize > self.max_size:
+                if header[:2] == b"MZ":
+                    debloated = self.debloat_pe(fname, child)
                     if debloated is not None:
-                        fname, contents = debloated
+                        fname, stream = debloated
 
             # Is it still too big?
-            if len(contents) > self.max_size:
+            stream.seek(0, os.SEEK_END)
+            stream_size = stream.tell()
+            stream.seek(0, os.SEEK_SET)
+
+            if stream.size > self.max_size:
                 self.log.warning(
                     "Child is too big for further processing (%d > %d)",
-                    len(contents),
+                    stream_size,
                     self.max_size,
                 )
                 continue
 
+            resource = Resource(name=fname, fd=stream, _close_fd=True)
             task = Task(
                 headers={
                     "type": "sample",
@@ -201,7 +214,7 @@ class ArchiveExtractor(Karton):
                     "quality": task.headers.get("quality", "high"),
                 },
                 payload={
-                    "sample": Resource(fname, contents),
+                    "sample": resource,
                     "parent": sample,
                     "extraction_level": extraction_level + 1,
                 },
