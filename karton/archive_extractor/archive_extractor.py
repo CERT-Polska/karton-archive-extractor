@@ -87,14 +87,38 @@ class ArchiveExtractor(Karton):
             )
             return None
 
-        with mmap.mmap(
-            child.stream.fileno(), 0, access=mmap.ACCESS_READ
-        ) as mapped_child:
+        mapped_child = mmap.mmap(child.stream.fileno(), 0, access=mmap.ACCESS_READ)
+        try:
             try:
-                pe = pefile.PE(data=mapped_child)
+                pe = pefile.PE(data=mapped_child, fast_load=True)
             except Exception:
                 self.log.warning("Failed to load as PE file.")
                 return None
+
+            # First, let's just check if cutting overlay would be enough
+            # debloat is not very memory-efficient
+            overlay_start = (
+                pe.sections[-1].PointerToRawData + pe.sections[-1].SizeOfRawData
+            )
+            # Align up to 4kB for a good measure
+            # (we need at least 512B alignment)
+            overlay_start += 0x1000 - (overlay_start % 0x1000)
+            if overlay_start <= self.max_size:
+                self.log.info("Removing overlay (reducing to %d bytes)", overlay_start)
+                mapped_without_overlay = mmap.mmap(
+                    child.stream.fileno(), overlay_start, access=mmap.ACCESS_READ
+                )
+                try:
+                    pe = pefile.PE(data=mapped_child)
+                except Exception:
+                    self.log.warning(
+                        "Failed to load as PE file after cutting overlay. "
+                        "Rolling back."
+                    )
+                    mapped_without_overlay.close()
+                else:
+                    mapped_child.close()
+                    mapped_child = mapped_without_overlay
 
             # we need to use a temporary directory because debloat can implicitly unpack
             # NSIS archives to parent directory of the passed file
@@ -120,6 +144,8 @@ class ArchiveExtractor(Karton):
                         or unpacked_file.name.lower() == "setup.nsis"
                     ):
                         return unpacked_file.name, unpacked_file.open(mode="rb")
+        finally:
+            mapped_child.close()
 
         self.log.warning("Output file is empty - failed to debloat file")
         return None
