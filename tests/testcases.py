@@ -143,4 +143,28 @@ TEST_CASES = [
             )
         ]
     ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "bloated.rar",
+        # debloat fails here, but it's good sample to check if
+        # everything fails gracefully
+        children=[]
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "bloated.tgz",
+        children=[
+            UnpackedFile(
+                name="Zapytanie_Ofertowe_HSSTEEL_20250818_721000452000.exe",
+                sha256="db707b7151b45942526e5d81670f1e4a254615debe4618f472ee49312b70806d"
+            )
+        ]
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "bloated.zip",
+        children=[
+            UnpackedFile(
+                name="microsoft.exe",
+                sha256="f6c1e53b3cacd1c6ba89a238711a1a132105a6d63a38ce9d3bbb242c9f1c393e"
+            )
+        ]
+    )
 ]
