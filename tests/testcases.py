@@ -4,6 +4,7 @@ from types import EllipsisType
 
 @dataclasses.dataclass
 class UnpackedFile:
+    # If extracted name is random, ... can be specified
     name: str | EllipsisType
     sha256: str
     children: list["UnpackedFile"] = dataclasses.field(default_factory=list)
@@ -14,6 +15,8 @@ class UnpackedFile:
 class ArchiveFile:
     path: PurePath
     content: bytes | None = None
+    # You can use [...] for "any, non-zero children" semantics
+    # You can also use [UnpackedFile, ...] if only first child is meaningful
     children: list[UnpackedFile | EllipsisType] = dataclasses.field(default_factory=list)
 
 
