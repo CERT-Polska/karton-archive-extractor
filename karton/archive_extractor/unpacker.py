@@ -143,7 +143,7 @@ def unpack(
         for child in unpacked.children:
             fname = (child.filename and child.filename.decode("utf8")) or child.sha256
 
-            logger.info("Unpacking child {}".format(fname))
+            logger.info("Unpacking child %s", fname)
 
             header = child.stream.read(4096)
 

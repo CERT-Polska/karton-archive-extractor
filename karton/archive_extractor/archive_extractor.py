@@ -68,7 +68,7 @@ class ArchiveExtractor(Karton):
         except Exception as e:
             self.log.warning("Exception during extraction: %r", e)
 
-        self.log.info("Got archive {}".format(fname))
+        self.log.info("Got archive %s", fname)
 
         extraction_level = task.get_payload("extraction_level", 0)
 
