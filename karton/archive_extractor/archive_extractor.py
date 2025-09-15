@@ -22,6 +22,13 @@ try:
 except ImportError:
     HAS_DEBLOAT = False
 
+# Monkey-patching for sflock.unpack.zip7.ZipFile.handles
+#
+# Originally it contains additional line that looks for
+# b"Registry.dat", b"AppxManifest.xml" in contents to avoid
+# MSIX files unpacking , but that loads the whole content into
+# memory. We want to avoid that.
+
 
 @functools.wraps(SFLockZipFile.handles)
 def zip_handles(self: SFLockZipFile) -> bool:
@@ -39,6 +46,17 @@ def zip_handles(self: SFLockZipFile) -> bool:
 
 
 SFLockZipFile.handles = zip_handles
+
+
+def unpack(filepath: bytes, filename: bytes, password: str | None) -> SFLockFile:
+    # We don't use sflock.unpack because the final step is "identify"
+    # which is unnecessary in our case and loads whole file into memory
+    sflock_file = SFLockFile.from_path(
+        filepath=filepath,
+        filename=filename,
+    )
+    Unpacker.single(sflock_file, password=password, duplicates=[])
+    return sflock_file
 
 
 class ArchiveExtractor(Karton):
@@ -192,12 +210,11 @@ class ArchiveExtractor(Karton):
                 archive_password = task_password
 
             try:
-                sflock_file = SFLockFile.from_path(
+                unpacked = unpack(
                     filepath=archive_file.name.encode("utf-8"),
                     filename=fname.encode("utf-8"),
+                    password=archive_password,
                 )
-                Unpacker.single(sflock_file, password=archive_password, duplicates=None)
-                unpacked = sflock_file
             except Exception as e:
                 # we can't really do anything about corrupted archives :(
                 self.log.warning("Error while unpacking archive: %s", e)
