@@ -22,6 +22,7 @@ setup(
         "karton.archive_extractor",
     ],
     include_package_data=True,
+    python_requires=">=3.10",
     install_requires=open("requirements.txt").read().splitlines(),
     extras_require={
         "debloat": open("requirements-debloat.txt").read().splitlines()

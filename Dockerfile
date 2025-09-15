@@ -1,4 +1,4 @@
-FROM python:3.10
+FROM python:3.12
 SHELL ["/bin/bash", "-c"]
 RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list.d/debian.sources \
     && apt-get update && apt-get install -y \
@@ -6,7 +6,9 @@ RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list.d/debian.sources \
     rar \
     unace \
     cabextract \
-    lzip
+    lzip \
+    zlib1g-dev \
+    zpaq
 
 WORKDIR /app/service
 COPY ./requirements.txt ./requirements-debloat.txt ./
