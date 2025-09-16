@@ -43,23 +43,23 @@ class ArchiveExtractor(Karton):
         )
 
     def _get_password(self, task: Task) -> Optional[str]:
-        task_password = task.get_payload("password", default=None)
+        password = task.get_payload("password", default=None)
 
         attributes = task.get_payload("attributes", default={})
-        if not task_password and attributes.get("password"):
+        if not password and attributes.get("password"):
             self.log.info("Accepting password from attributes")
-            task_password = attributes.get("password")[0]
-        return task_password
+            password = attributes.get("password")[0]
+        return password
 
     def process(self, task: Task) -> None:
         sample = cast(RemoteResource, task.get_resource("sample"))
-        task_password = self._get_password(task)
+        archive_password = self._get_password(task)
 
-        fname = "archive"
+        if sample.name:
+            fname = sample.name
+        else:
+            fname = "archive"
         try:
-            if sample.name:
-                fname = sample.name
-
             classifier_extension = task.headers.get("extension")
             if classifier_extension:
                 classifier_extension = "." + classifier_extension
@@ -79,9 +79,6 @@ class ArchiveExtractor(Karton):
             return
 
         with sample.download_temporary_file() as archive_file:
-            archive_password = None
-            if task_password is not None:
-                archive_password = task_password
 
             for child_name, child_stream in unpack(
                 file=archive_file,

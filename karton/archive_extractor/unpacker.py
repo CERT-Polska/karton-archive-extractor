@@ -145,16 +145,18 @@ def unpack(
 
             logger.info("Unpacking child %s", fname)
 
-            header = child.stream.read(4096)
+            magic = child.stream.read(2)
 
-            if not header:
-                logger.warning("Child has no contents or protected by unknown password")
+            if not magic:
+                logger.warning(
+                    "Child has no contents or is protected by unknown password"
+                )
                 continue
 
             stream = child.stream
 
             if child.filesize > max_size:
-                if header[:2] == b"MZ":
+                if magic == b"MZ":
                     debloated = debloat_pe(fname, child, max_size=max_size)
                     if debloated is not None:
                         fname, stream = debloated
