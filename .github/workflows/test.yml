@@ -26,5 +26,5 @@ jobs:
           python-version: 3.${{ matrix.minor }}
       - name: Install unpackers
         run: sudo apt install -y rar unace-nonfree cabextract lzip zlib1g-dev zpaq gnupg
-      - run: pip install -r requirements.txt pytest==8.4.2 pytest-subtests==0.14.2
+      - run: pip install -r requirements.txt -r requirements-debloat.txt pytest==8.4.2 pytest-subtests==0.14.2
       - run: pytest

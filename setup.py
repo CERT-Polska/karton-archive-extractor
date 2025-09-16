@@ -21,6 +21,7 @@ setup(
     packages=[
         "karton.archive_extractor",
     ],
+    python_version=">=3.10",
     include_package_data=True,
     python_requires=">=3.10",
     install_requires=open("requirements.txt").read().splitlines(),
