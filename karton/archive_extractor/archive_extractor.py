@@ -58,7 +58,12 @@ class ArchiveExtractor(Karton):
         if sample.name:
             fname = sample.name
         else:
+            # Placeholder name if sample resource doesn't come
+            # with any name. We append the proper extension in
+            # further step and it could be unexpected to have
+            # the name part empty.
             fname = "archive"
+
         try:
             classifier_extension = task.headers.get("extension")
             if classifier_extension:
