@@ -1,2 +1,2 @@
 karton-core>=5.0.0,<6.0.0
-SFlock2[linux]==0.3.80
+SFlock2[linux]==0.3.85
