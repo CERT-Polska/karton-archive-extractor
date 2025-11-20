@@ -154,7 +154,7 @@ def try_unpack(
             for child in children:
                 if not child.stream.read(1):
                     logger.info(
-                        "Child '%s' has no contents or "
+                        "Child %s has no contents or "
                         "is protected using different password",
                         child.filename,
                     )
