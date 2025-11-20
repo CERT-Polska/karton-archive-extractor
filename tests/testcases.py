@@ -166,5 +166,18 @@ TEST_CASES = [
                 sha256="f6c1e53b3cacd1c6ba89a238711a1a132105a6d63a38ce9d3bbb242c9f1c393e"
             )
         ]
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "infected.zip",
+        children=[
+            UnpackedFile(
+                name="240155-MTCO-Purchase Note.scr",
+                sha256="1f068fe39ea82125b5fcf7485d14fc4870d000924007f4207f9b7adbb33a5f0f"
+            ),
+            UnpackedFile(
+                name="GN-1100-24.docx",
+                sha256="179e94db91298bdec3b9256b3f85634b6ca1df6057b2016e2e80e09aff58f51b"
+            )
+        ]
     )
 ]

@@ -19,6 +19,12 @@ try:
 except ImportError:
     HAS_DEBLOAT = False
 
+COMMON_PASSWORDS = [
+    "infected",
+    "malware",
+    "password",
+]
+
 logger = logging.getLogger("karton.archive-extractor")
 
 # Monkey-patching for sflock.unpack.zip7.ZipFile.handles
@@ -113,6 +119,64 @@ def debloat_pe(
     return None
 
 
+def try_unpack(
+    file: IO[bytes],
+    filename: str,
+    password: str | None,
+) -> Optional[SFLockFile]:
+    try:
+        if password is not None:
+            passwords: list[str | None] = [password]
+        else:
+            passwords = [None] + COMMON_PASSWORDS
+
+        unpacked = None
+        for password in passwords:
+            if password is not None:
+                logger.info("Trying to unpack archive using password '%s'", password)
+
+            unpacked = sflock_unpack(
+                filepath=file.name.encode("utf-8"),
+                filename=filename.encode("utf-8"),
+                password=password,
+            )
+
+            if not unpacked.children:
+                logger.info("Failed to unpack this archive: %s", unpacked.error)
+                # Try another password
+                unpacked = None
+                continue
+
+            has_contents = False
+
+            children: list[SFLockFile] = unpacked.children
+
+            for child in children:
+                if not child.stream.read(1):
+                    logger.info(
+                        "Child %s has no contents or "
+                        "is protected using different password",
+                        child.filename,
+                    )
+                else:
+                    has_contents = True
+
+                child.stream.seek(0)
+
+                if has_contents:
+                    # If any child is non-empty: we're done
+                    return unpacked
+
+            # Otherwise, we don't know how to unpack this archive
+            unpacked = None
+    except Exception as e:
+        # we can't really do anything about corrupted archives :(
+        logger.warning("Error while unpacking archive: %s", e)
+        return None
+
+    return unpacked
+
+
 def unpack(
     file: IO[bytes],
     filename: str,
@@ -120,22 +184,13 @@ def unpack(
     max_children: int,
     max_size: int,
 ) -> Iterator[Tuple[str, IO[bytes]]]:
-    try:
-        unpacked = sflock_unpack(
-            filepath=file.name.encode("utf-8"),
-            filename=filename.encode("utf-8"),
-            password=password,
-        )
-    except Exception as e:
-        # we can't really do anything about corrupted archives :(
-        logger.warning("Error while unpacking archive: %s", e)
+    unpacked = try_unpack(file, filename, password)
+
+    if not unpacked:
+        logger.warning("We're unable to unpack this archive")
         return
 
     try:
-        if not unpacked.children:
-            logger.warning("Don't know how to unpack this archive")
-            return
-
         if len(unpacked.children) > max_children:
             logger.warning("Too many children for further processing")
             return
@@ -194,7 +249,7 @@ if __name__ == "__main__":
     import argparse
     import logging
 
-    logger.setLevel(logging.INFO)
+    logging.basicConfig(level=logging.INFO)
 
     parser = argparse.ArgumentParser(
         description="Process a file with optional size and children limits."

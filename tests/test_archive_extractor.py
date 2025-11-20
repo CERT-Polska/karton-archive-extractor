@@ -47,6 +47,8 @@ class ArchiveExtractorTestCase(KartonTestCase):
                         len(archive.children),
                         msg="Incorrect number of extracted files",
                     )
+                extracted = sorted(extracted, key=lambda c: c.get_resource("sample").name)
+                children = sorted(children, key=lambda c: c.name)
                 for task, expected_child in zip(extracted, children):
                     child = task.get_resource("sample")
                     if expected_child.name is not ...:
