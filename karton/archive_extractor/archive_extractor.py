@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Optional, cast
 
 from karton.core import Karton, RemoteResource, Resource, Task
@@ -5,7 +6,7 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
-from .unpacker import unpack
+from .unpacker import unpack, ArchiveInfo
 
 
 class ArchiveExtractor(Karton):
@@ -51,6 +52,10 @@ class ArchiveExtractor(Karton):
             password = attributes.get("password")[0]
         return password
 
+    def _get_filepath_to_execute(self, task: Task) -> Optional[Path]:
+        attributes = task.get_payload("attributes", default={})
+        return attributes.get("filepath_to_execute")
+
     def process(self, task: Task) -> None:
         sample = cast(RemoteResource, task.get_resource("sample"))
         archive_password = self._get_password(task)
@@ -84,6 +89,7 @@ class ArchiveExtractor(Karton):
             return
 
         with sample.download_temporary_file() as archive_file:
+            archive_info = ArchiveInfo(fname, None, self._get_filepath_to_execute(task))
 
             for child_name, child_stream in unpack(
                 file=archive_file,
@@ -91,9 +97,10 @@ class ArchiveExtractor(Karton):
                 password=archive_password,
                 max_children=self.max_children,
                 max_size=self.max_size,
+                archive_info=archive_info
             ):
                 resource = Resource(name=child_name, fd=child_stream)
-                task = Task(
+                child_task = Task(
                     headers={
                         "type": "sample",
                         "kind": "raw",
@@ -105,4 +112,39 @@ class ArchiveExtractor(Karton):
                         "extraction_level": extraction_level + 1,
                     },
                 )
-                self.send_task(task)
+                self.send_task(child_task)
+
+            # If detected as package, also emit the archive with metadata for sandbox
+            if archive_info.is_package and archive_info.matched_child_name:
+                self.log.info(
+                    f"Archive detected as package, re-emitting with executable hint: "
+                    f"{archive_info.matched_child_name}"
+                )
+
+                # Re-open the archive file for re-emission
+                archive_file.seek(0)
+                archive_resource = Resource(name=fname, fd=archive_file)
+
+                attributes = {
+                    "filepath_to_execute": str(archive_info.matched_child_name),
+                }
+
+                if archive_info.password:
+                    attributes["archive_password"] = archive_info.password
+
+                package_task = Task(
+                    headers={
+                        "type": "sample",
+                        "kind": "archive",
+                        "quality": task.headers.get("quality", "high"),
+                    },
+                    payload={
+                        "sample": archive_resource,
+                        "parent": sample,
+                        "extraction_level": extraction_level,
+                        "attributes": attributes,
+                    },
+                )
+                self.send_task(package_task)
+                
+

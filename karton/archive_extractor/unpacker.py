@@ -4,6 +4,7 @@ import mmap
 import os
 import shutil
 import tempfile
+from dataclasses import dataclass#, field
 from pathlib import Path
 from typing import IO, Iterator, Optional, Tuple
 
@@ -33,6 +34,21 @@ logger = logging.getLogger("karton.archive-extractor")
 # b"Registry.dat", b"AppxManifest.xml" in contents to avoid
 # MSIX files unpacking , but that loads the whole content into
 # memory. We want to avoid that.
+
+@dataclass(slots=True)
+class ArchiveInfo:
+    """Information about the archive and how to process it"""
+    # Input: archive identification
+    name: str
+    password: str | None = None
+
+    # Input: analyst-provided filepath to execute
+    filepath_to_exe: Path | None = None
+
+    # Output: decision and results (populated during processing)
+    is_package: bool = False
+    matched_child_name: str | None = None
+
 
 
 @functools.wraps(SFLockZipFile.handles)
@@ -123,6 +139,7 @@ def try_unpack(
     file: IO[bytes],
     filename: str,
     password: str | None,
+    archive_info: ArchiveInfo,
 ) -> Optional[SFLockFile]:
     try:
         if password is not None:
@@ -165,6 +182,7 @@ def try_unpack(
 
                 if has_contents:
                     # If any child is non-empty: we're done
+                    archive_info.password = password
                     return unpacked
 
             # Otherwise, we don't know how to unpack this archive
@@ -177,22 +195,110 @@ def try_unpack(
     return unpacked
 
 
+def find_executable_in_children(
+    unpacked: SFLockFile,
+    filepath: Path,
+) -> Optional[str]:
+    """
+    Find a child file matching the given filepath.
+
+    Args:
+        unpacked: The unpacked archive
+        filepath: Relative path to file (e.g., "setup.exe" or "folder/file.exe")
+
+    Returns:
+        The matching child filename or None
+    """
+    target_path = str(filepath).strip()
+    logger.info(f"Looking for executable: {target_path}")
+
+    for child in unpacked.children:
+        child_name = (child.filename and child.filename.decode("utf8")) or child.sha256
+
+        # Try exact match first
+        if child_name == target_path:
+            logger.info(f"Found exact match: {child_name}")
+            return child_name
+
+        # Try case-insensitive match
+        if child_name.lower() == target_path.lower():
+            logger.info(f"Found case-insensitive match: {child_name}")
+            return child_name
+
+    logger.warning(f"File not found in archive: {target_path}")
+    return None
+
+
+def should_treat_as_package(
+    unpacked: SFLockFile,
+    archive_info: ArchiveInfo,
+) -> None:
+    """
+    Determine if archive should be treated as a single package.
+    Updates archive_info in-place with the decision.
+
+    Args:
+        unpacked: The unpacked archive
+        archive_info: ArchiveInfo object to update with decision
+    """
+    logger.info("Checking if archive should be processed as a package")
+
+    # If analyst provided a filepath, treat as package
+    if archive_info.filepath_to_exe is not None:
+        matched_child = find_executable_in_children(unpacked, archive_info.filepath_to_exe)
+        archive_info.is_package = True
+        archive_info.matched_child_name = matched_child
+
+        if matched_child:
+            logger.info(f"Treating as package with selected executable: {matched_child}")
+        else:
+            logger.warning(
+                f"Analyst provided filepath '{archive_info.filepath_to_exe}' "
+                f"but file not found in archive. Falling back to extracting all children."
+            )
+            archive_info.is_package = False
+        return
+
+    # TODO: Add automatic heuristics here
+    # Examples:
+    # - Single .exe with many supporting files?
+    # - Presence of installer metadata?
+    # - Known installer formats (NSIS, InnoSetup, etc.)?
+    #
+    # For now, default to extracting all children
+    archive_info.is_package = False
+
+
 def unpack(
     file: IO[bytes],
     filename: str,
     password: str | None,
     max_children: int,
     max_size: int,
+    archive_info: ArchiveInfo,
 ) -> Iterator[Tuple[str, IO[bytes]]]:
-    unpacked = try_unpack(file, filename, password)
+    """
+    Unpack archive and yield all children.
+
+    Package detection information is stored in archive_info but doesn't
+    affect child extraction - all children are always yielded.
+    """
+    unpacked = try_unpack(file, filename, password, archive_info=archive_info)
 
     if not unpacked:
         logger.warning("We're unable to unpack this archive")
         return
 
+    # Determine if this should be treated as a package
+    # This populates archive_info fields but doesn't change extraction behavior
+    should_treat_as_package(unpacked, archive_info)
+
     try:
         if len(unpacked.children) > max_children:
-            logger.warning("Too many children for further processing")
+            logger.warning(
+                f"Too many children ({len(unpacked.children)}) for further processing "
+                f"(max: {max_children})"
+            )
             return
 
         for child in unpacked.children:
@@ -276,7 +382,19 @@ if __name__ == "__main__":
         default=False,
         help="Run without writing output files (default: False)",
     )
+    parser.add_argument(
+        "--filepath-to-execute",
+        type=str,
+        default=None,
+        help="Path to file within archive to execute (for package mode)",
+    )
     args = parser.parse_args()
+
+    archive_info = ArchiveInfo(
+        name=args.file,
+        password=None,
+        filepath_to_exe=Path(args.filepath_to_execute) if args.filepath_to_execute else None,
+    )
 
     with open(args.file, "rb") as f:
         for name, stream in unpack(
@@ -285,6 +403,7 @@ if __name__ == "__main__":
             password=args.password,
             max_size=args.max_size,
             max_children=args.max_children,
+            archive_info=archive_info,
         ):
             logger.info("Unpacked file: %s", name)
             if not args.dry_run:
@@ -294,3 +413,11 @@ if __name__ == "__main__":
                     )
                 with open(name, "wb") as outf:
                     shutil.copyfileobj(stream, outf)
+
+    # Print package detection result
+    if archive_info.is_package:
+        logger.info(f"Archive detected as package")
+        if archive_info.matched_child_name:
+            logger.info(f"Executable to run: {archive_info.matched_child_name}")
+        else:
+            logger.warning(f"Package mode requested but executable not found")
