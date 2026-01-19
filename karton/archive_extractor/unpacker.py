@@ -4,13 +4,15 @@ import mmap
 import os
 import shutil
 import tempfile
-from dataclasses import dataclass#, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Iterator, Optional, Tuple
 
 from sflock.abstracts import File as SFLockFile  # type: ignore
 from sflock.abstracts import Unpacker
 from sflock.unpack.zip7 import ZipFile as SFLockZipFile  # type: ignore
+
+from .package_heuristics import should_treat_as_package
 
 try:
     import pefile  # type: ignore
@@ -193,80 +195,6 @@ def try_unpack(
         return None
 
     return unpacked
-
-
-def find_executable_in_children(
-    unpacked: SFLockFile,
-    filepath: Path,
-) -> Optional[str]:
-    """
-    Find a child file matching the given filepath.
-
-    Args:
-        unpacked: The unpacked archive
-        filepath: Relative path to file (e.g., "setup.exe" or "folder/file.exe")
-
-    Returns:
-        The matching child filename or None
-    """
-    target_path = str(filepath).strip()
-    logger.info(f"Looking for executable: {target_path}")
-
-    for child in unpacked.children:
-        child_name = (child.filename and child.filename.decode("utf8")) or child.sha256
-
-        # Try exact match first
-        if child_name == target_path:
-            logger.info(f"Found exact match: {child_name}")
-            return child_name
-
-        # Try case-insensitive match
-        if child_name.lower() == target_path.lower():
-            logger.info(f"Found case-insensitive match: {child_name}")
-            return child_name
-
-    logger.warning(f"File not found in archive: {target_path}")
-    return None
-
-
-def should_treat_as_package(
-    unpacked: SFLockFile,
-    archive_info: ArchiveInfo,
-) -> None:
-    """
-    Determine if archive should be treated as a single package.
-    Updates archive_info in-place with the decision.
-
-    Args:
-        unpacked: The unpacked archive
-        archive_info: ArchiveInfo object to update with decision
-    """
-    logger.info("Checking if archive should be processed as a package")
-
-    # If analyst provided a filepath, treat as package
-    if archive_info.filepath_to_exe is not None:
-        matched_child = find_executable_in_children(unpacked, archive_info.filepath_to_exe)
-        archive_info.is_package = True
-        archive_info.matched_child_name = matched_child
-
-        if matched_child:
-            logger.info(f"Treating as package with selected executable: {matched_child}")
-        else:
-            logger.warning(
-                f"Analyst provided filepath '{archive_info.filepath_to_exe}' "
-                f"but file not found in archive. Falling back to extracting all children."
-            )
-            archive_info.is_package = False
-        return
-
-    # TODO: Add automatic heuristics here
-    # Examples:
-    # - Single .exe with many supporting files?
-    # - Presence of installer metadata?
-    # - Known installer formats (NSIS, InnoSetup, etc.)?
-    #
-    # For now, default to extracting all children
-    archive_info.is_package = False
 
 
 def unpack(
