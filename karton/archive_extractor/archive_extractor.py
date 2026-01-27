@@ -19,7 +19,7 @@ class ArchiveExtractor(Karton):
     version = __version__
     persistent = True
     filters = [
-        {"type": "sample", "stage": "recognized", "kind": "archive"},
+        {"type": "sample", "stage": "recognized", "kind": "archive", "package": "!True"},
     ]
 
     def __init__(
@@ -53,8 +53,11 @@ class ArchiveExtractor(Karton):
         return password
 
     def _get_filepath_to_execute(self, task: Task) -> Optional[Path]:
-        attributes = task.get_payload("attributes", default={})
-        return attributes.get("filepath_to_execute")
+        karton_internal = task.get_payload("karton_internal", default={})
+        value = karton_internal.get("filepath_to_execute")
+        if value:
+            return Path(value)
+        return None
 
     def process(self, task: Task) -> None:
         sample = cast(RemoteResource, task.get_resource("sample"))
@@ -99,6 +102,9 @@ class ArchiveExtractor(Karton):
                 max_size=self.max_size,
                 archive_info=archive_info
             ):
+                # TODO: tmp
+                if archive_info.is_package:
+                    continue
                 resource = Resource(name=child_name, fd=child_stream)
                 child_task = Task(
                     headers={
@@ -125,24 +131,28 @@ class ArchiveExtractor(Karton):
                 archive_file.seek(0)
                 archive_resource = Resource(name=fname, fd=archive_file)
 
-                attributes = {
+                # Internal Karton attributes for inter-service communication.
+                # Put in 'karton_internal' key to prevent mwdb-reporter from processing them.
+                karton_internal = {
                     "filepath_to_execute": str(archive_info.matched_child_name),
                 }
 
                 if archive_info.password:
-                    attributes["archive_password"] = archive_info.password
+                    karton_internal["archive_password"] = archive_info.password
 
                 package_task = Task(
                     headers={
                         "type": "sample",
+                        "stage": "recognized",
                         "kind": "archive",
+                        "package": "True",
                         "quality": task.headers.get("quality", "high"),
                     },
                     payload={
                         "sample": archive_resource,
                         "parent": sample,
                         "extraction_level": extraction_level,
-                        "attributes": attributes,
+                        "karton_internal": karton_internal,
                     },
                 )
                 self.send_task(package_task)
