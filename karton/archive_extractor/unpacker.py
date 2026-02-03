@@ -44,8 +44,8 @@ class ArchiveInfo:
     name: str
     password: str | None = None
 
-    # Input: analyst-provided filepath to execute
-    filepath_to_exe: Path | None = None
+    # Input: analyst-provided archive entry path to execute
+    archive_entry_path: Path | None = None
 
     # Output: decision and results (populated during processing)
     is_package: bool = False
@@ -71,12 +71,12 @@ def zip_handles(self: SFLockZipFile) -> bool:
 SFLockZipFile.handles = zip_handles
 
 
-def sflock_unpack(filepath: bytes, filename: bytes, password: str | None) -> SFLockFile:
+def sflock_unpack(filepath_bytes: bytes, filename_bytes: bytes, password: str | None) -> SFLockFile:
     # We don't use sflock.unpack because the final step is "identify"
     # which is unnecessary in our case and loads whole file into memory
     sflock_file = SFLockFile.from_path(
-        filepath=filepath,
-        filename=filename,
+        filepath=filepath_bytes,
+        filename=filename_bytes,
     )
     Unpacker.single(sflock_file, password=password, duplicates=[])
     return sflock_file
@@ -104,13 +104,13 @@ def debloat_pe(
         # we need to use a temporary directory because debloat can implicitly unpack
         # NSIS archives to parent directory of the passed file
         with tempfile.TemporaryDirectory() as tmp_dir:
-            temp_file = Path(tmp_dir) / filename
+            tmp_file = Path(tmp_dir) / filename
 
             try:
                 process_pe(
                     pe,
                     cert_preservation=False,
-                    out_path=temp_file.as_posix(),
+                    out_path=tmp_file.as_posix(),
                     last_ditch_processing=False,
                     log_message=log_message_wrapped,
                 )
@@ -155,8 +155,8 @@ def try_unpack(
                 logger.info("Trying to unpack archive using password '%s'", password)
 
             unpacked = sflock_unpack(
-                filepath=file.name.encode("utf-8"),
-                filename=filename.encode("utf-8"),
+                filepath_bytes=file.name.encode("utf-8"),
+                filename_bytes=filename.encode("utf-8"),
                 password=password,
             )
 
@@ -168,9 +168,9 @@ def try_unpack(
 
             has_contents = False
 
-            children: list[SFLockFile] = unpacked.children
+            unpacked_children: list[SFLockFile] = unpacked.children
 
-            for child in children:
+            for child in unpacked_children:
                 if not child.stream.read(1):
                     logger.info(
                         "Child %s has no contents or "
@@ -230,9 +230,9 @@ def unpack(
             return
 
         for child in unpacked.children:
-            fname = (child.filename and child.filename.decode("utf8")) or child.sha256
+            child_filename = (child.filename and child.filename.decode("utf8")) or child.sha256
 
-            logger.info("Unpacking child %s", fname)
+            logger.info("Unpacking child %s", child_filename)
 
             magic = child.stream.read(2)
 
@@ -242,18 +242,18 @@ def unpack(
                 )
                 continue
 
-            stream = child.stream
+            child_stream = child.stream
 
             if child.filesize > max_size:
                 if magic == b"MZ":
-                    debloated = debloat_pe(fname, child, max_size=max_size)
-                    if debloated is not None:
-                        fname, stream = debloated
+                    debloat_result = debloat_pe(child_filename, child, max_size=max_size)
+                    if debloat_result is not None:
+                        child_filename, child_stream = debloat_result
 
             # Is it still too big?
-            stream.seek(0, os.SEEK_END)
-            stream_size = stream.tell()
-            stream.seek(0, os.SEEK_SET)
+            child_stream.seek(0, os.SEEK_END)
+            stream_size = child_stream.tell()
+            child_stream.seek(0, os.SEEK_SET)
 
             if stream_size > max_size:
                 logger.warning(
@@ -263,8 +263,8 @@ def unpack(
                 )
                 continue
 
-            yield fname, stream
-            stream.close()
+            yield child_filename, child_stream
+            child_stream.close()
     except Exception:
         unpacked.close()
         raise
@@ -311,7 +311,7 @@ if __name__ == "__main__":
         help="Run without writing output files (default: False)",
     )
     parser.add_argument(
-        "--filepath-to-execute",
+        "--archive-entry-path",
         type=str,
         default=None,
         help="Path to file within archive to execute (for package mode)",
@@ -321,7 +321,7 @@ if __name__ == "__main__":
     archive_info = ArchiveInfo(
         name=args.file,
         password=None,
-        filepath_to_exe=Path(args.filepath_to_execute) if args.filepath_to_execute else None,
+        archive_entry_path=Path(args.archive_entry_path) if args.archive_entry_path else None,
     )
 
     with open(args.file, "rb") as f:

@@ -278,8 +278,8 @@ def should_treat_as_package(
     logger.info("Checking if archive should be processed as a package")
 
     # If analyst provided a filepath, treat as package
-    if archive_info.filepath_to_exe is not None:
-        matched_child = find_executable_in_children(unpacked, archive_info.filepath_to_exe)
+    if archive_info.archive_entry_path is not None:
+        matched_child = find_executable_in_children(unpacked, archive_info.archive_entry_path)
         archive_info.is_package = True
         archive_info.matched_child_name = matched_child
 
@@ -287,7 +287,7 @@ def should_treat_as_package(
             logger.info(f"Treating as package with selected executable: {matched_child}")
         else:
             logger.warning(
-                f"Analyst provided filepath '{archive_info.filepath_to_exe}' "
+                f"Analyst provided filepath '{archive_info.archive_entry_path}' "
                 f"but file not found in archive. Falling back to extracting all children."
             )
             archive_info.is_package = False
