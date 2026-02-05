@@ -230,7 +230,13 @@ def unpack(
             return
 
         for child in unpacked.children:
-            child_filename = (child.filename and child.filename.decode("utf8")) or child.sha256
+            # Use relapath to preserve directory structure within archive
+            # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
+            child_filename = (
+                (child.relapath and child.relapath.decode("utf8")) or
+                (child.filename and child.filename.decode("utf8")) or
+                child.sha256
+            )
 
             logger.info("Unpacking child %s", child_filename)
 

@@ -35,7 +35,13 @@ def _classify_children(unpacked: SFLockFile) -> dict[str, list[str]]:
     classified = {}
 
     for child in unpacked.children:
-        child_name = (child.filename and child.filename.decode("utf8")) or child.sha256
+        # Use relapath to preserve directory structure within archive
+        # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
+        child_name = (
+            (child.relapath and child.relapath.decode("utf8")) or
+            (child.filename and child.filename.decode("utf8")) or
+            child.sha256
+        )
         ext = _get_file_extension(child_name)
 
         if ext not in classified:
@@ -156,7 +162,12 @@ def find_best_executable(unpacked: SFLockFile) -> Optional[str]:
     # Score all executables
     scored_executables = []
     for child in unpacked.children:
-        child_name = (child.filename and child.filename.decode("utf8")) or child.sha256
+        # Use relapath to preserve directory structure within archive
+        child_name = (
+            (child.relapath and child.relapath.decode("utf8")) or
+            (child.filename and child.filename.decode("utf8")) or
+            child.sha256
+        )
         if child_name in executables:
             score, reason = _get_executable_score(child_name, child.filesize)
             scored_executables.append((score, child_name, reason, child.filesize))
@@ -247,7 +258,12 @@ def find_executable_in_children(
     logger.info(f"Looking for executable: {target_path}")
 
     for child in unpacked.children:
-        child_name = (child.filename and child.filename.decode("utf8")) or child.sha256
+        # Use relapath to preserve directory structure within archive
+        child_name = (
+            (child.relapath and child.relapath.decode("utf8")) or
+            (child.filename and child.filename.decode("utf8")) or
+            child.sha256
+        )
 
         # Try exact match first
         if child_name == target_path:
