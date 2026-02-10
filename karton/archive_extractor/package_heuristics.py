@@ -4,6 +4,7 @@ Package detection heuristics for archives.
 This module provides functionality to detect when an archive should be treated
 as a package/installer rather than a collection of unrelated files.
 """
+
 from __future__ import annotations
 
 import logging
@@ -11,7 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from sflock.abstracts import File as SFLockFile  # type: ignore
-
 
 if TYPE_CHECKING:
     from .unpacker import ArchiveInfo
@@ -22,7 +22,7 @@ logger = logging.getLogger("karton.archive-extractor")
 
 def _get_file_extension(filename: str) -> str:
     """Get file extension in lowercase"""
-    return Path(filename).suffix.lower() if '.' in filename else ""
+    return Path(filename).suffix.lower() if "." in filename else ""
 
 
 def _classify_children(unpacked: SFLockFile) -> dict[str, list[str]]:
@@ -32,15 +32,15 @@ def _classify_children(unpacked: SFLockFile) -> dict[str, list[str]]:
     Returns:
         Dictionary with extensions as keys and lists of filenames as values
     """
-    classified = {}
+    classified: dict[str, list[str]] = {}
 
     for child in unpacked.children:
         # Use relapath to preserve directory structure within archive
         # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
         child_name = (
-            (child.relapath and child.relapath.decode("utf8")) or
-            (child.filename and child.filename.decode("utf8")) or
-            child.sha256
+            (child.relapath and child.relapath.decode("utf8"))
+            or (child.filename and child.filename.decode("utf8"))
+            or child.sha256
         )
         ext = _get_file_extension(child_name)
 
@@ -56,8 +56,14 @@ def _is_known_installer_pattern(filename: str) -> bool:
     name_lower = filename.lower()
 
     installer_patterns = [
-        "setup", "install", "installer", "launcher",
-        "application", "updater", "patch", "hotfix"
+        "setup",
+        "install",
+        "installer",
+        "launcher",
+        "application",
+        "updater",
+        "patch",
+        "hotfix",
     ]
 
     return any(pattern in name_lower for pattern in installer_patterns)
@@ -68,13 +74,24 @@ def _is_utility_executable(filename: str) -> bool:
     name_lower = filename.lower()
 
     utility_patterns = [
-        "unins", "uninstall", "unins000", "uninst",
-        "update", "updater", "updater_",
-        "patch", "hotfix",
-        "checker", "verify", "verify_",
-        "config", "configuration",
-        "register", "registration",
-        "repair", "fix_"
+        "unins",
+        "uninstall",
+        "unins000",
+        "uninst",
+        "update",
+        "updater",
+        "updater_",
+        "patch",
+        "hotfix",
+        "checker",
+        "verify",
+        "verify_",
+        "config",
+        "configuration",
+        "register",
+        "registration",
+        "repair",
+        "fix_",
     ]
 
     return any(pattern in name_lower for pattern in utility_patterns)
@@ -164,14 +181,16 @@ def find_best_executable(unpacked: SFLockFile) -> Optional[str]:
     for child in unpacked.children:
         # Use relapath to preserve directory structure within archive
         child_name = (
-            (child.relapath and child.relapath.decode("utf8")) or
-            (child.filename and child.filename.decode("utf8")) or
-            child.sha256
+            (child.relapath and child.relapath.decode("utf8"))
+            or (child.filename and child.filename.decode("utf8"))
+            or child.sha256
         )
         if child_name in executables:
             score, reason = _get_executable_score(child_name, child.filesize)
             scored_executables.append((score, child_name, reason, child.filesize))
-            logger.debug(f"Scored {child_name}: {score} ({reason}) size={child.filesize}")
+            logger.debug(
+                f"Scored {child_name}: {score} ({reason}) size={child.filesize}"
+            )
 
     # Sort by score descending
     scored_executables.sort(key=lambda x: x[0], reverse=True)
@@ -207,10 +226,12 @@ def _detect_electron_app(classified: dict[str, list[str]]) -> bool:
         "electron.exe",
         "package.json",
         "resources/app.asar",
-        "resources/default_app.asar"
+        "resources/default_app.asar",
     ]
 
-    matches = sum(1 for indicator in electron_indicators if indicator in all_names_lower)
+    matches = sum(
+        1 for indicator in electron_indicators if indicator in all_names_lower
+    )
     return matches >= 2
 
 
@@ -260,9 +281,9 @@ def find_executable_in_children(
     for child in unpacked.children:
         # Use relapath to preserve directory structure within archive
         child_name = (
-            (child.relapath and child.relapath.decode("utf8")) or
-            (child.filename and child.filename.decode("utf8")) or
-            child.sha256
+            (child.relapath and child.relapath.decode("utf8"))
+            or (child.filename and child.filename.decode("utf8"))
+            or child.sha256
         )
 
         # Try exact match first
@@ -295,16 +316,21 @@ def should_treat_as_package(
 
     # If analyst provided a filepath, treat as package
     if archive_info.archive_entry_path is not None:
-        matched_child = find_executable_in_children(unpacked, archive_info.archive_entry_path)
+        matched_child = find_executable_in_children(
+            unpacked, archive_info.archive_entry_path
+        )
         archive_info.is_package = True
         archive_info.matched_child_name = matched_child
 
         if matched_child:
-            logger.info(f"Treating as package with selected executable: {matched_child}")
+            logger.info(
+                f"Treating as package with selected executable: {matched_child}"
+            )
         else:
             logger.warning(
                 f"Analyst provided filepath '{archive_info.archive_entry_path}' "
-                f"but file not found in archive. Falling back to extracting all children."
+                "but file not found in archive. Falling back to extracting "
+                "all children."
             )
             archive_info.is_package = False
         return
@@ -312,7 +338,9 @@ def should_treat_as_package(
     # Automatic heuristics
     classified = _classify_children(unpacked)
 
-    logger.info(f"Archive contents: { {ext: len(files) for ext, files in classified.items()} }")
+    logger.info(
+        f"Archive contents: { {ext: len(files) for ext, files in classified.items()} }"
+    )
 
     # Detect Electron apps
     if _detect_electron_app(classified):
@@ -329,10 +357,11 @@ def should_treat_as_package(
         archive_info.matched_child_name = find_best_executable(unpacked)
         return
 
-    # Single executable - treat as package
+    # Single exe + other files = package (single file is just compressed)
     exe_files = classified.get(".exe", [])
-    if len(exe_files) == 1:
-        logger.info("Single executable found, treating as package")
+    total_files = sum(len(files) for files in classified.values())
+    if len(exe_files) == 1 and total_files > 1:
+        logger.info("Single exe with other files, treating as package")
         archive_info.is_package = True
         archive_info.matched_child_name = exe_files[0]
         return

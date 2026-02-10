@@ -6,7 +6,7 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
-from .unpacker import unpack, ArchiveInfo
+from .unpacker import ArchiveInfo, unpack
 
 
 class ArchiveExtractor(Karton):
@@ -19,7 +19,12 @@ class ArchiveExtractor(Karton):
     version = __version__
     persistent = True
     filters = [
-        {"type": "sample", "stage": "recognized", "kind": "archive", "package": "!True"},
+        {
+            "type": "sample",
+            "stage": "recognized",
+            "kind": "archive",
+            "package": "!True",
+        },
     ]
 
     def __init__(
@@ -92,7 +97,9 @@ class ArchiveExtractor(Karton):
             return
 
         with sample.download_temporary_file() as tmp_archive_file:
-            archive_info = ArchiveInfo(archive_filename, None, self._get_archive_entry_path(task))
+            archive_info = ArchiveInfo(
+                archive_filename, None, self._get_archive_entry_path(task)
+            )
 
             for child_name, child_stream in unpack(
                 file=tmp_archive_file,
@@ -100,7 +107,7 @@ class ArchiveExtractor(Karton):
                 password=archive_password,
                 max_children=self.max_children,
                 max_size=self.max_size,
-                archive_info=archive_info
+                archive_info=archive_info,
             ):
                 # TODO: tmp
                 if archive_info.is_package:
@@ -132,7 +139,8 @@ class ArchiveExtractor(Karton):
                 archive_resource = Resource(name=archive_filename, fd=tmp_archive_file)
 
                 # Internal Karton attributes for inter-service communication.
-                # Put in 'karton_internal' key to prevent mwdb-reporter from processing them.
+                # Put in 'karton_internal' key to prevent mwdb-reporter from
+                # processing them.
                 karton_internal = {
                     "archive_entry_path": str(archive_info.matched_child_name),
                 }
@@ -156,5 +164,3 @@ class ArchiveExtractor(Karton):
                     },
                 )
                 self.send_task(package_task)
-                
-

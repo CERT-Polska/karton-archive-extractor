@@ -37,9 +37,11 @@ logger = logging.getLogger("karton.archive-extractor")
 # MSIX files unpacking , but that loads the whole content into
 # memory. We want to avoid that.
 
+
 @dataclass(slots=True)
 class ArchiveInfo:
     """Information about the archive and how to process it"""
+
     # Input: archive identification
     name: str
     password: str | None = None
@@ -50,7 +52,6 @@ class ArchiveInfo:
     # Output: decision and results (populated during processing)
     is_package: bool = False
     matched_child_name: str | None = None
-
 
 
 @functools.wraps(SFLockZipFile.handles)
@@ -71,7 +72,9 @@ def zip_handles(self: SFLockZipFile) -> bool:
 SFLockZipFile.handles = zip_handles
 
 
-def sflock_unpack(filepath_bytes: bytes, filename_bytes: bytes, password: str | None) -> SFLockFile:
+def sflock_unpack(
+    filepath_bytes: bytes, filename_bytes: bytes, password: str | None
+) -> SFLockFile:
     # We don't use sflock.unpack because the final step is "identify"
     # which is unnecessary in our case and loads whole file into memory
     sflock_file = SFLockFile.from_path(
@@ -233,9 +236,9 @@ def unpack(
             # Use relapath to preserve directory structure within archive
             # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
             child_filename = (
-                (child.relapath and child.relapath.decode("utf8")) or
-                (child.filename and child.filename.decode("utf8")) or
-                child.sha256
+                (child.relapath and child.relapath.decode("utf8"))
+                or (child.filename and child.filename.decode("utf8"))
+                or child.sha256
             )
 
             logger.info("Unpacking child %s", child_filename)
@@ -252,7 +255,9 @@ def unpack(
 
             if child.filesize > max_size:
                 if magic == b"MZ":
-                    debloat_result = debloat_pe(child_filename, child, max_size=max_size)
+                    debloat_result = debloat_pe(
+                        child_filename, child, max_size=max_size
+                    )
                     if debloat_result is not None:
                         child_filename, child_stream = debloat_result
 
@@ -327,7 +332,9 @@ if __name__ == "__main__":
     archive_info = ArchiveInfo(
         name=args.file,
         password=None,
-        archive_entry_path=Path(args.archive_entry_path) if args.archive_entry_path else None,
+        archive_entry_path=(
+            Path(args.archive_entry_path) if args.archive_entry_path else None
+        ),
     )
 
     with open(args.file, "rb") as f:
@@ -350,8 +357,8 @@ if __name__ == "__main__":
 
     # Print package detection result
     if archive_info.is_package:
-        logger.info(f"Archive detected as package")
+        logger.info("Archive detected as package")
         if archive_info.matched_child_name:
             logger.info(f"Executable to run: {archive_info.matched_child_name}")
         else:
-            logger.warning(f"Package mode requested but executable not found")
+            logger.warning("Package mode requested but executable not found")
