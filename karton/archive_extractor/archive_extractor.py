@@ -109,9 +109,6 @@ class ArchiveExtractor(Karton):
                 max_size=self.max_size,
                 archive_info=archive_info,
             ):
-                # TODO: tmp
-                if archive_info.is_package:
-                    continue
                 child_resource = Resource(name=child_name, fd=child_stream)
                 child_task = Task(
                     headers={
