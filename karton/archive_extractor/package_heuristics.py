@@ -8,7 +8,7 @@ as a package/installer rather than a collection of unrelated files.
 from __future__ import annotations
 
 import logging
-from pathlib import Path
+import os.path
 from typing import TYPE_CHECKING, Optional
 
 from sflock.abstracts import File as SFLockFile  # type: ignore
@@ -22,7 +22,8 @@ logger = logging.getLogger("karton.archive-extractor")
 
 def _get_file_extension(filename: str) -> str:
     """Get file extension in lowercase"""
-    return Path(filename).suffix.lower() if "." in filename else ""
+    _, ext = os.path.splitext(filename)
+    return ext.lower()
 
 
 def _classify_children(unpacked: SFLockFile) -> dict[str, list[str]]:
@@ -263,7 +264,7 @@ def _detect_installer_archive(classified: dict[str, list[str]]) -> tuple[bool, s
 
 def find_executable_in_children(
     unpacked: SFLockFile,
-    filepath: Path,
+    filepath: str,
 ) -> Optional[str]:
     """
     Find a child file matching the given filepath.
@@ -275,7 +276,7 @@ def find_executable_in_children(
     Returns:
         The matching child filename or None
     """
-    target_path = str(filepath).strip()
+    target_path = filepath.strip()
     logger.info(f"Looking for executable: {target_path}")
 
     for child in unpacked.children:
@@ -315,12 +316,12 @@ def should_treat_as_package(
     logger.info("Checking if archive should be processed as a package")
 
     # If analyst provided a filepath, treat as package
-    if archive_info.archive_entry_path is not None:
+    if archive_info.entry_path is not None:
         matched_child = find_executable_in_children(
-            unpacked, archive_info.archive_entry_path
+            unpacked, archive_info.entry_path
         )
         archive_info.is_package = True
-        archive_info.matched_child_name = matched_child
+        archive_info.entry_path = matched_child
 
         if matched_child:
             logger.info(
@@ -328,7 +329,7 @@ def should_treat_as_package(
             )
         else:
             logger.warning(
-                f"Analyst provided filepath '{archive_info.archive_entry_path}' "
+                f"Analyst provided filepath '{archive_info.entry_path}' "
                 "but file not found in archive. Falling back to extracting "
                 "all children."
             )
@@ -346,7 +347,7 @@ def should_treat_as_package(
     if _detect_electron_app(classified):
         logger.info("Detected Electron application")
         archive_info.is_package = True
-        archive_info.matched_child_name = find_best_executable(unpacked)
+        archive_info.entry_path = find_best_executable(unpacked)
         return
 
     # Detect installer archives
@@ -354,16 +355,15 @@ def should_treat_as_package(
     if is_installer:
         logger.info(f"Detected installer package: {reason}")
         archive_info.is_package = True
-        archive_info.matched_child_name = find_best_executable(unpacked)
+        archive_info.entry_path = find_best_executable(unpacked)
         return
 
-    # Single exe + other files = package (single file is just compressed)
+    # Archive with exe file = package
     exe_files = classified.get(".exe", [])
-    total_files = sum(len(files) for files in classified.values())
-    if len(exe_files) == 1 and total_files > 1:
-        logger.info("Single exe with other files, treating as package")
+    if len(exe_files) >= 1:
+        logger.info("Archive contains exe file, treating as package")
         archive_info.is_package = True
-        archive_info.matched_child_name = exe_files[0]
+        archive_info.entry_path = exe_files[0]
         return
 
     # No package detected

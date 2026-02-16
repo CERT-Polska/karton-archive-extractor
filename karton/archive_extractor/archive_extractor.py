@@ -1,4 +1,4 @@
-from pathlib import Path
+import os.path
 from typing import Optional, cast
 
 from karton.core import Karton, RemoteResource, Resource, Task
@@ -23,7 +23,7 @@ class ArchiveExtractor(Karton):
             "type": "sample",
             "stage": "recognized",
             "kind": "archive",
-            "package": "!True",
+            "executable_package": "!True",
         },
     ]
 
@@ -57,25 +57,27 @@ class ArchiveExtractor(Karton):
             password = attributes.get("password")[0]
         return password
 
-    def _get_archive_entry_path(self, task: Task) -> Optional[Path]:
-        karton_internal = task.get_payload("karton_internal", default={})
-        value = karton_internal.get("archive_entry_path")
-        if value:
-            return Path(value)
-        return None
+    def _get_archive_entry_path(self, task: Task) -> Optional[str]:
+        archive_entry_path = task.get_payload("archive_entry_path", default=None)
+
+        attributes = task.get_payload("attributes", default={})
+        if not archive_entry_path and attributes.get("archive_entry_path"):
+            self.log.info("Accepting archive_entry_path from attributes")
+            archive_entry_path = attributes.get("archive_entry_path")[0]
+
+        return archive_entry_path
 
     def process(self, task: Task) -> None:
         sample = cast(RemoteResource, task.get_resource("sample"))
         archive_password = self._get_password(task)
+        archive_entry_path = self._get_archive_entry_path(task)
+        extraction_level = task.get_payload("extraction_level", 0)
+        quality = task.headers.get("quality", "high")
 
-        if sample.name:
-            archive_filename = sample.name
-        else:
-            # Placeholder name if sample resource doesn't come
-            # with any name. We append the proper extension in
-            # further step and it could be unexpected to have
-            # the name part empty.
-            archive_filename = "archive"
+        # Use sample name or placeholder if not provided
+        # Extension will be appended in the next step if needed
+        # (it could be unexpected to have the name part empty)
+        archive_filename = sample.name or "archive"
 
         try:
             classifier_extension = task.headers.get("extension")
@@ -88,8 +90,6 @@ class ArchiveExtractor(Karton):
 
         self.log.info("Got archive %s", archive_filename)
 
-        extraction_level = task.get_payload("extraction_level", 0)
-
         if extraction_level > self.max_depth:
             self.log.warning(
                 "Maximum extraction depth exceeded. Can't extract this archive."
@@ -98,7 +98,9 @@ class ArchiveExtractor(Karton):
 
         with sample.download_temporary_file() as tmp_archive_file:
             archive_info = ArchiveInfo(
-                archive_filename, None, self._get_archive_entry_path(task)
+                archive_filename,
+                archive_password,
+                archive_entry_path,
             )
 
             for child_name, child_stream in unpack(
@@ -109,12 +111,14 @@ class ArchiveExtractor(Karton):
                 max_size=self.max_size,
                 archive_info=archive_info,
             ):
-                child_resource = Resource(name=child_name, fd=child_stream)
+                # Extract basename for child resource name (paths in archives may include dirs)
+                child_basename = os.path.basename(child_name)
+                child_resource = Resource(name=child_basename, fd=child_stream)
                 child_task = Task(
                     headers={
                         "type": "sample",
                         "kind": "raw",
-                        "quality": task.headers.get("quality", "high"),
+                        "quality": quality,
                     },
                     payload={
                         "sample": child_resource,
@@ -125,39 +129,33 @@ class ArchiveExtractor(Karton):
                 self.send_task(child_task)
 
             # If detected as package, also emit the archive with metadata for sandbox
-            if archive_info.is_package and archive_info.matched_child_name:
+            if archive_info.is_package and archive_info.entry_path:
                 self.log.info(
                     f"Archive detected as package, re-emitting with executable hint: "
-                    f"{archive_info.matched_child_name}"
+                    f"{archive_info.entry_path}"
                 )
 
-                # Re-open the archive file for re-emission
+                # Reset file pointer for re-emission
                 tmp_archive_file.seek(0)
                 archive_resource = Resource(name=archive_filename, fd=tmp_archive_file)
 
-                # Internal Karton attributes for inter-service communication.
-                # Put in 'karton_internal' key to prevent mwdb-reporter from
-                # processing them.
-                karton_internal = {
-                    "archive_entry_path": str(archive_info.matched_child_name),
+                # Internal Karton metadata for inter-service communication.
+                # Separate from 'attributes' to avoid MWDB attribute validation errors.
+                package_payload = {
+                    "sample": archive_resource,
+                    "parent": sample,
+                    "extraction_level": extraction_level,
+                    "archive_entry_path": archive_info.entry_path,
                 }
 
                 if archive_info.password:
-                    karton_internal["archive_password"] = archive_info.password
+                    package_payload["archive_password"] = archive_info.password
 
                 package_task = Task(
                     headers={
-                        "type": "sample",
-                        "stage": "recognized",
-                        "kind": "archive",
-                        "package": "True",
-                        "quality": task.headers.get("quality", "high"),
+                        **task.headers,
+                        "executable_package": "True",
                     },
-                    payload={
-                        "sample": archive_resource,
-                        "parent": sample,
-                        "extraction_level": extraction_level,
-                        "karton_internal": karton_internal,
-                    },
+                    payload=package_payload,
                 )
                 self.send_task(package_task)

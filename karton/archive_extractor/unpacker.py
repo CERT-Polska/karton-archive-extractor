@@ -46,12 +46,12 @@ class ArchiveInfo:
     name: str
     password: str | None = None
 
-    # Input: analyst-provided archive entry path to execute
-    archive_entry_path: Path | None = None
+    # Entry path to execute within the archive
+    # Set from analyst input or auto-detected during processing
+    entry_path: str | None = None
 
     # Output: decision and results (populated during processing)
     is_package: bool = False
-    matched_child_name: str | None = None
 
 
 @functools.wraps(SFLockZipFile.handles)
@@ -332,9 +332,7 @@ if __name__ == "__main__":
     archive_info = ArchiveInfo(
         name=args.file,
         password=None,
-        archive_entry_path=(
-            Path(args.archive_entry_path) if args.archive_entry_path else None
-        ),
+        entry_path=args.archive_entry_path,
     )
 
     with open(args.file, "rb") as f:
@@ -358,7 +356,7 @@ if __name__ == "__main__":
     # Print package detection result
     if archive_info.is_package:
         logger.info("Archive detected as package")
-        if archive_info.matched_child_name:
-            logger.info(f"Executable to run: {archive_info.matched_child_name}")
+        if archive_info.entry_path:
+            logger.info(f"Executable to run: {archive_info.entry_path}")
         else:
             logger.warning("Package mode requested but executable not found")
