@@ -301,7 +301,7 @@ def find_executable_in_children(
     return None
 
 
-def should_treat_as_package(
+def determine_if_package(
     unpacked: SFLockFile,
     archive_info: "ArchiveInfo",
 ) -> None:

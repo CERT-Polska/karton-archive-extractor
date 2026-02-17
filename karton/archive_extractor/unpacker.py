@@ -12,7 +12,7 @@ from sflock.abstracts import File as SFLockFile  # type: ignore
 from sflock.abstracts import Unpacker
 from sflock.unpack.zip7 import ZipFile as SFLockZipFile  # type: ignore
 
-from .package_heuristics import should_treat_as_package
+from .package_heuristics import determine_if_package
 
 try:
     import pefile  # type: ignore
@@ -222,7 +222,7 @@ def unpack(
 
     # Determine if this should be treated as a package
     # This populates archive_info fields but doesn't change extraction behavior
-    should_treat_as_package(unpacked, archive_info)
+    determine_if_package(unpacked, archive_info)
 
     try:
         if len(unpacked.children) > max_children:
