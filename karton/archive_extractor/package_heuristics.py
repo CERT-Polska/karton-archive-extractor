@@ -317,9 +317,7 @@ def determine_if_package(
 
     # If analyst provided a filepath, treat as package
     if archive_info.entry_path is not None:
-        matched_child = find_executable_in_children(
-            unpacked, archive_info.entry_path
-        )
+        matched_child = find_executable_in_children(unpacked, archive_info.entry_path)
         archive_info.is_package = True
         archive_info.entry_path = matched_child
 

@@ -111,7 +111,8 @@ class ArchiveExtractor(Karton):
                 max_size=self.max_size,
                 archive_info=archive_info,
             ):
-                # Extract basename for child resource name (paths in archives may include dirs)
+                # Extract basename for child resource name
+                # (paths in archives may include dirs)
                 child_basename = os.path.basename(child_name)
                 child_resource = Resource(name=child_basename, fd=child_stream)
                 child_task = Task(

@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Iterator, Optional, Tuple
+from typing import IO, Iterator, Optional, Tuple, cast
 
 from sflock.abstracts import File as SFLockFile  # type: ignore
 from sflock.abstracts import Unpacker
@@ -147,10 +147,13 @@ def try_unpack(
     archive_info: ArchiveInfo,
 ) -> Optional[SFLockFile]:
     try:
+        passwords: list[str | None]
         if password is not None:
-            passwords: list[str | None] = [password]
+            passwords = [password]
         else:
-            passwords = [None] + COMMON_PASSWORDS
+            passwords = cast(list[str | None], [None]) + cast(
+                list[str | None], COMMON_PASSWORDS
+            )
 
         unpacked = None
         for password in passwords:
