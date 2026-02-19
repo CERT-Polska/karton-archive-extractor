@@ -32,6 +32,9 @@ class ArchiveExtractorTestCase(KartonTestCase):
                     payload={"sample": resource},
                 )
                 extracted = self.run_task(archive_task)
+                # Filter out package re-emission task (executable_package: True)
+                # which is emitted when archive contains executables
+                extracted = [t for t in extracted if t.headers.get("executable_package") != "True"]
                 if ... in archive.children:
                     children = list(itertools.takewhile(lambda c: c is not ..., archive.children))
                     self.assertGreaterEqual(
