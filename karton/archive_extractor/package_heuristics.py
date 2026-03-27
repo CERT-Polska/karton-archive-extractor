@@ -337,9 +337,8 @@ def determine_if_package(
     # Automatic heuristics
     classified = _classify_children(unpacked)
 
-    logger.info(
-        f"Archive contents: { {ext: len(files) for ext, files in classified.items()} }"
-    )
+    archive_contents = {ext: len(files) for ext, files in classified.items()}
+    logger.info(f"Archive contents: {archive_contents}")
 
     # Detect Electron apps
     if _detect_electron_app(classified):
