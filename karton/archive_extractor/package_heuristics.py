@@ -262,7 +262,7 @@ def _detect_installer_archive(classified: dict[str, list[str]]) -> tuple[bool, s
     return False, ""
 
 
-def find_executable_in_children(
+def find_child_by_path(
     unpacked: SFLockFile,
     filepath: str,
 ) -> Optional[str]:
@@ -280,22 +280,15 @@ def find_executable_in_children(
     logger.info(f"Looking for executable: {target_path}")
 
     for child in unpacked.children:
-        # Use relapath to preserve directory structure within archive
-        child_name = (
-            (child.relapath and child.relapath.decode("utf8"))
-            or (child.filename and child.filename.decode("utf8"))
-            or child.sha256
-        )
-
-        # Try exact match first
-        if child_name == target_path:
-            logger.info(f"Found exact match: {child_name}")
-            return child_name
-
-        # Try case-insensitive match
-        if child_name.lower() == target_path.lower():
-            logger.info(f"Found case-insensitive match: {child_name}")
-            return child_name
+        if child.relapath:
+            try:
+                child_path = child.relapath.decode("utf8")
+                if child_path == target_path:
+                    logger.info(f"Found match: {child_path}")
+                    return child_path
+            except UnicodeDecodeError:
+                logger.warning(f"Failed to decode path {child.relapath} as utf8, skipping.")
+                continue
 
     logger.warning(f"File not found in archive: {target_path}")
     return None
@@ -315,16 +308,13 @@ def determine_if_package(
     """
     logger.info("Checking if archive should be processed as a package")
 
-    # If analyst provided a filepath, treat as package
+    # If analyst provided a correct filepath, treat as package
     if archive_info.entry_path is not None:
-        matched_child = find_executable_in_children(unpacked, archive_info.entry_path)
-        archive_info.is_package = True
-        archive_info.entry_path = matched_child
-
-        if matched_child:
+        if find_child_by_path(unpacked, archive_info.entry_path):
+            archive_info.is_package = True
             logger.info(
-                f"Treating as package with selected executable: {matched_child}"
-            )
+                f"Treating as package with selected executable: {archive_info.entry_path}"
+                )
             return
         else:
             logger.warning(
