@@ -312,19 +312,14 @@ def determine_if_package(
 
     # If analyst provided a correct filepath, treat as package
     if archive_info.entry_path is not None:
-        if find_child_by_path(unpacked, archive_info.entry_path):
-            archive_info.is_package = True
-            logger.info(
-                "Treating as package with selected executable: "
-                f"{archive_info.entry_path}"
-            )
-            return
-        else:
+        archive_info.is_package = True
+        if not find_child_by_path(unpacked, archive_info.entry_path):
             logger.warning(
-                f"Analyst provided filepath '{archive_info.entry_path}' "
-                "but file not found in archive. Falling back to heuristics."
+                f"Provided filepath '{archive_info.entry_path}' not found "
+                "in the archive. This may indicate an incorrect path or SFlock "
+                "unpacking issue."
             )
-            archive_info.is_package = False
+        return
 
     # Automatic heuristics
     classified = _classify_children(unpacked)
