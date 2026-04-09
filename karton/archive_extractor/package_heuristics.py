@@ -325,14 +325,13 @@ def determine_if_package(
             logger.info(
                 f"Treating as package with selected executable: {matched_child}"
             )
+            return
         else:
             logger.warning(
                 f"Analyst provided filepath '{archive_info.entry_path}' "
-                "but file not found in archive. Falling back to extracting "
-                "all children."
+                "but file not found in archive. Falling back to heuristics."
             )
             archive_info.is_package = False
-        return
 
     # Automatic heuristics
     classified = _classify_children(unpacked)

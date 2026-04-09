@@ -136,17 +136,13 @@ class ArchiveExtractor(Karton):
                     f"{archive_info.entry_path}"
                 )
 
-                # Reset file pointer for re-emission
-                tmp_archive_file.seek(0)
-                archive_resource = Resource(name=archive_filename, fd=tmp_archive_file)
-
                 # Internal Karton metadata for inter-service communication.
                 # Separate from 'attributes' to avoid MWDB attribute validation errors.
                 package_payload = {
-                    "sample": archive_resource,
-                    "parent": sample,
+                    "sample": sample,
                     "extraction_level": extraction_level,
                     "archive_entry_path": archive_info.entry_path,
+                    "archive_filename": archive_filename,
                 }
 
                 if archive_info.password:
