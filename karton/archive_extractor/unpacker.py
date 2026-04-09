@@ -221,6 +221,12 @@ def unpack(
 
     if not unpacked:
         logger.warning("We're unable to unpack this archive")
+        if archive_info.entry_path:
+            archive_info.is_package = True
+            logger.warning(
+                f"Entry path '{archive_info.entry_path}' provided, but "
+                "we couldn't verify it."
+            )
         return
 
     # Determine if this should be treated as a package
