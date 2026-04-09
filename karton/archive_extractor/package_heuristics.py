@@ -287,7 +287,9 @@ def find_child_by_path(
                     logger.info(f"Found match: {child_path}")
                     return child_path
             except UnicodeDecodeError:
-                logger.warning(f"Failed to decode path {child.relapath} as utf8, skipping.")
+                logger.warning(
+                    f"Failed to decode path {child.relapath} as utf8, skipping."
+                )
                 continue
 
     logger.warning(f"File not found in archive: {target_path}")
@@ -313,8 +315,9 @@ def determine_if_package(
         if find_child_by_path(unpacked, archive_info.entry_path):
             archive_info.is_package = True
             logger.info(
-                f"Treating as package with selected executable: {archive_info.entry_path}"
-                )
+                "Treating as package with selected executable: "
+                f"{archive_info.entry_path}"
+            )
             return
         else:
             logger.warning(
