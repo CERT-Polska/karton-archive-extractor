@@ -1,2 +1,2 @@
-debloat==1.6.5
+debloat==1.6.6
 pefile
