@@ -249,19 +249,25 @@ def unpack(
     # This populates archive_info fields but doesn't change extraction behavior
     determine_if_package(unpacked, archive_info)
 
-    for child in unpacked.children:
-        archive_info.files.append({"path": _child_path(child), "size": child.filesize})
-        child.stream.seek(0)
-
     try:
         if len(unpacked.children) > max_children:
             logger.warning(
                 f"Too many children ({len(unpacked.children)}) for further processing "
                 f"(max: {max_children})"
             )
+            for child in unpacked.children:
+                archive_info.files.append(
+                    {
+                        "path": _child_path(child),
+                        "size": child.filesize,
+                        "error": "Extraction skipped: too many files in archive",
+                    }
+                )
             return
 
         for child in unpacked.children:
+            size = child.filesize
+            child.stream.seek(0)
             # Use relapath to preserve directory structure within archive
             # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
             child_filename = _child_path(child)
@@ -274,11 +280,18 @@ def unpack(
                 logger.warning(
                     "Child has no contents or is protected by unknown password"
                 )
+                archive_info.files.append(
+                    {
+                        "path": child_filename,
+                        "size": size,
+                        "error": "File is empty or protected by an unknown password",
+                    }
+                )
                 continue
 
             child_stream = child.stream
 
-            if child.filesize > max_size:
+            if size > max_size:
                 if magic == b"MZ":
                     debloat_result = debloat_pe(
                         child_filename, child, max_size=max_size
@@ -297,8 +310,19 @@ def unpack(
                     stream_size,
                     max_size,
                 )
+                archive_info.files.append(
+                    {
+                        "path": child_filename,
+                        "size": size,
+                        "error": (
+                            f"File is too big to extract "
+                            f"({size} bytes, limit is {max_size} bytes)"
+                        ),
+                    }
+                )
                 continue
 
+            archive_info.files.append({"path": child_filename, "size": size})
             yield child_filename, child_stream
             child_stream.close()
     except Exception:
