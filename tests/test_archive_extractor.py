@@ -32,9 +32,34 @@ class ArchiveExtractorTestCase(KartonTestCase):
                     payload={"sample": resource},
                 )
                 extracted = self.run_task(archive_task)
+
+                listing_tasks = [t for t in extracted if t.has_payload("attributes")]
+                extracted = [t for t in extracted if not t.has_payload("attributes")]
+
                 # Filter out package re-emission task (executable_package: True)
                 # which is emitted when archive contains executables
                 extracted = [t for t in extracted if t.headers.get("executable_package") != "True"]
+
+                # The archive contents are reported as a single attribute task
+                self.assertEqual(
+                    len(listing_tasks), 1,
+                    msg="Expected a single archive file listing task",
+                )
+                listing = listing_tasks[0]
+                self.assertEqual(listing.headers["stage"], "analyzed")
+                archive_files = listing.get_payload("attributes")["archive_files"]
+                self.assertIsInstance(archive_files, list)
+                self.assertEqual(
+                    len(archive_files), 1,
+                    msg="archive_files attribute should hold a single value",
+                )
+                files = archive_files[0]
+                self.assertIsInstance(files, list)
+                self.assertTrue(files, msg="Archive file listing should not be empty")
+                for entry in files:
+                    self.assertIsInstance(entry["path"], str)
+                    self.assertIsInstance(entry["size"], int)
+
                 if ... in archive.children:
                     children = list(itertools.takewhile(lambda c: c is not ..., archive.children))
                     self.assertGreaterEqual(
