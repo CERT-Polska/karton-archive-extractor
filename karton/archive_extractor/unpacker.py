@@ -56,6 +56,7 @@ class ArchiveInfo:
     # Manifest of every file in the archive: [{"path": ..., "size": ...}, ...]
     files: list[dict[str, str | int]] = field(default_factory=list)
 
+
 @functools.wraps(SFLockZipFile.handles)
 def zip_handles(self: SFLockZipFile) -> bool:
     if (
@@ -249,9 +250,7 @@ def unpack(
     determine_if_package(unpacked, archive_info)
 
     for child in unpacked.children:
-        archive_info.files.append(
-            {"path": _child_path(child), "size": child.filesize}
-        )
+        archive_info.files.append({"path": _child_path(child), "size": child.filesize})
         child.stream.seek(0)
 
     try:
