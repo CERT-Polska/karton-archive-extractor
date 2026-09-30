@@ -4,7 +4,7 @@ import mmap
 import os
 import shutil
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Iterator, Optional, Tuple, cast
 
@@ -53,6 +53,8 @@ class ArchiveInfo:
     # Output: decision and results (populated during processing)
     is_package: bool = False
 
+    # Manifest of every file in the archive: [{"path": ..., "size": ...}, ...]
+    files: list[dict[str, str | int]] = field(default_factory=list)
 
 @functools.wraps(SFLockZipFile.handles)
 def zip_handles(self: SFLockZipFile) -> bool:
@@ -203,6 +205,19 @@ def try_unpack(
     return unpacked
 
 
+def _child_path(child: SFLockFile) -> str:
+    """
+    Return the path of a child within the archive.
+    Use relapath to preserve directory structure within archive
+    relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
+    """
+    return (
+        (child.relapath and child.relapath.decode("utf8", "replace"))
+        or (child.filename and child.filename.decode("utf8", "replace"))
+        or child.sha256
+    )
+
+
 def unpack(
     file: IO[bytes],
     filename: str,
@@ -233,6 +248,12 @@ def unpack(
     # This populates archive_info fields but doesn't change extraction behavior
     determine_if_package(unpacked, archive_info)
 
+    for child in unpacked.children:
+        archive_info.files.append(
+            {"path": _child_path(child), "size": child.filesize}
+        )
+        child.stream.seek(0)
+
     try:
         if len(unpacked.children) > max_children:
             logger.warning(
@@ -244,11 +265,7 @@ def unpack(
         for child in unpacked.children:
             # Use relapath to preserve directory structure within archive
             # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
-            child_filename = (
-                (child.relapath and child.relapath.decode("utf8"))
-                or (child.filename and child.filename.decode("utf8"))
-                or child.sha256
-            )
+            child_filename = _child_path(child)
 
             logger.info("Unpacking child %s", child_filename)
 
