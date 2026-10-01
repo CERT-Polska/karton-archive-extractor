@@ -129,6 +129,31 @@ class ArchiveExtractor(Karton):
                 )
                 self.send_task(child_task)
 
+            # Emit a list of files in the archive (path + size) as an attribute
+            if (
+                self.config.getboolean(
+                    "archive-extractor", "emit_listing", fallback=False
+                )
+                and archive_info.files
+            ):
+                self.log.info(
+                    "Emitting archive file listing (%d files)",
+                    len(archive_info.files),
+                )
+                attributes_task = Task(
+                    headers={
+                        "type": "sample",
+                        "stage": "analyzed",
+                    },
+                    payload={
+                        "sample": sample,
+                        "attributes": {
+                            "archive_files": [archive_info.files],
+                        },
+                    },
+                )
+                self.send_task(attributes_task)
+
             # If detected as package, also emit the archive with metadata for sandbox
             if archive_info.is_package and archive_info.entry_path:
                 self.log.info(

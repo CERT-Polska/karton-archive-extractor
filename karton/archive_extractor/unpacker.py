@@ -4,7 +4,7 @@ import mmap
 import os
 import shutil
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Iterator, Optional, Tuple, cast
 
@@ -52,6 +52,9 @@ class ArchiveInfo:
 
     # Output: decision and results (populated during processing)
     is_package: bool = False
+
+    # Manifest of every file in the archive: [{"path": ..., "size": ...}, ...]
+    files: list[dict[str, str | int]] = field(default_factory=list)
 
 
 @functools.wraps(SFLockZipFile.handles)
@@ -203,6 +206,19 @@ def try_unpack(
     return unpacked
 
 
+def _child_path(child: SFLockFile) -> str:
+    """
+    Return the path of a child within the archive.
+    Use relapath to preserve directory structure within archive
+    relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
+    """
+    return (
+        (child.relapath and child.relapath.decode("utf8", "replace"))
+        or (child.filename and child.filename.decode("utf8", "replace"))
+        or child.sha256
+    )
+
+
 def unpack(
     file: IO[bytes],
     filename: str,
@@ -239,16 +255,22 @@ def unpack(
                 f"Too many children ({len(unpacked.children)}) for further processing "
                 f"(max: {max_children})"
             )
+            for child in unpacked.children:
+                archive_info.files.append(
+                    {
+                        "path": _child_path(child),
+                        "size": child.filesize,
+                        "error": "Extraction skipped: too many files in archive",
+                    }
+                )
             return
 
         for child in unpacked.children:
+            size = child.filesize
+            child.stream.seek(0)
             # Use relapath to preserve directory structure within archive
             # relapath contains the full relative path (e.g., "dir1/dir2/file.exe")
-            child_filename = (
-                (child.relapath and child.relapath.decode("utf8"))
-                or (child.filename and child.filename.decode("utf8"))
-                or child.sha256
-            )
+            child_filename = _child_path(child)
 
             logger.info("Unpacking child %s", child_filename)
 
@@ -258,11 +280,18 @@ def unpack(
                 logger.warning(
                     "Child has no contents or is protected by unknown password"
                 )
+                archive_info.files.append(
+                    {
+                        "path": child_filename,
+                        "size": size,
+                        "error": "File is empty or protected by an unknown password",
+                    }
+                )
                 continue
 
             child_stream = child.stream
 
-            if child.filesize > max_size:
+            if size > max_size:
                 if magic == b"MZ":
                     debloat_result = debloat_pe(
                         child_filename, child, max_size=max_size
@@ -281,8 +310,19 @@ def unpack(
                     stream_size,
                     max_size,
                 )
+                archive_info.files.append(
+                    {
+                        "path": child_filename,
+                        "size": size,
+                        "error": (
+                            f"File is too big to extract "
+                            f"({size} bytes, limit is {max_size} bytes)"
+                        ),
+                    }
+                )
                 continue
 
+            archive_info.files.append({"path": child_filename, "size": size})
             yield child_filename, child_stream
             child_stream.close()
     except Exception:
