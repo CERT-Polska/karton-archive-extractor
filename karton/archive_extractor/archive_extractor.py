@@ -130,7 +130,12 @@ class ArchiveExtractor(Karton):
                 self.send_task(child_task)
 
             # Emit a list of files in the archive (path + size) as an attribute
-            if archive_info.files:
+            if (
+                self.config.getboolean(
+                    "archive-extractor", "emit_listing", fallback=False
+                )
+                and archive_info.files
+            ):
                 self.log.info(
                     "Emitting archive file listing (%d files)",
                     len(archive_info.files),

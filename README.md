@@ -33,6 +33,31 @@ Performs extraction of known archive types and e-mail attachments. Produces "raw
 }
 ```
 
+and optionally if configured in karton.ini
+```
+[archive-extractor]
+emit_listing = true
+```
+
+```
+{
+    "type": "sample",
+    "stage": "analyzed",
+    payload={
+        "sample": sample,
+        "attributes": {
+            "archive_files": [
+                {
+                    "path": <str>, 
+                    "size": <int>, 
+                    "error": <str>, # error key is optional
+                },
+            ] 
+        }
+    }
+}
+```
+
 
 ## Usage
 
