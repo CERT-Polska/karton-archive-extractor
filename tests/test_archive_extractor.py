@@ -2,13 +2,17 @@ import itertools
 import pathlib
 
 from karton.core import Task, Resource
-from karton.core.test import KartonTestCase
+from karton.core.test import KartonTestCase, ConfigMock
 from karton.archive_extractor import ArchiveExtractor
 
 from .testcases import TEST_CASES, ArchiveFile
 
 class ArchiveExtractorTestCase(KartonTestCase):
     karton_class = ArchiveExtractor
+    def setUp(self):  
+        self.config = ConfigMock()  
+        self.config._config["archive-extractor"] = {"emit_listing": True}  
+        super().setUp()
 
     def test_extract_archive(self) -> None:
         test_cases = TEST_CASES[:]
