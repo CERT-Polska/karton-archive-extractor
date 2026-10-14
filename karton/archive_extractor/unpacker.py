@@ -107,8 +107,6 @@ def debloat_pe(
             logger.warning("Failed to load as PE file.")
             return None
 
-        # we need to use a temporary directory because debloat can implicitly unpack
-        # NSIS archives to parent directory of the passed file
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_file = Path(tmp_dir) / filename
 
@@ -119,20 +117,16 @@ def debloat_pe(
                     out_path=tmp_file.as_posix(),
                     last_ditch_processing=False,
                     log_message=log_message_wrapped,
+                    extract=False,  # don't extract NSIS and other installers
                 )
             except Exception:
                 logger.exception("Debloat failed with exception.")
             else:
-                # debloat can sometimes unpack NSIS installer archives
-                # but we're interested only in the installer script
                 for unpacked_file in Path(tmp_dir).rglob("*"):
                     if unpacked_file.is_dir():
                         continue
 
-                    if (
-                        unpacked_file.name == filename
-                        or unpacked_file.name.lower() == "setup.nsis"
-                    ):
+                    if unpacked_file.name == filename:
                         return unpacked_file.name, unpacked_file.open(mode="rb")
     finally:
         if pe:
