@@ -6,6 +6,7 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
+from .backends import resolve_backend
 from .unpacker import ArchiveInfo, unpack
 
 
@@ -47,6 +48,11 @@ class ArchiveExtractor(Karton):
         self.max_children = self.config.getint(
             "archive-extractor", "max_children", fallback=1000
         )
+        # Unpacking backend: "sflock" (default) or "7zip"
+        self.unpack_backend = resolve_backend(
+            self.config.get("archive-extractor", "backend", fallback=None)
+        )
+        self.log.info("Using unpacking backend: %s", self.unpack_backend.name)
 
     def _get_password(self, task: Task) -> Optional[str]:
         password = task.get_payload("password", default=None)
@@ -110,6 +116,7 @@ class ArchiveExtractor(Karton):
                 max_children=self.max_children,
                 max_size=self.max_size,
                 archive_info=archive_info,
+                backend=self.unpack_backend,
             ):
                 # Extract basename for child resource name
                 # (paths in archives may include dirs)

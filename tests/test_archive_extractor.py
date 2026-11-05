@@ -9,9 +9,15 @@ from .testcases import TEST_CASES, ArchiveFile
 
 class ArchiveExtractorTestCase(KartonTestCase):
     karton_class = ArchiveExtractor
-    def setUp(self):  
-        self.config = ConfigMock()  
-        self.config._config["archive-extractor"] = {"emit_listing": True}  
+    # Unpacking backend exercised by this test case ("sflock" or "7zip")
+    backend_name = "sflock"
+
+    def setUp(self):
+        self.config = ConfigMock()
+        self.config._config["archive-extractor"] = {
+            "emit_listing": True,
+            "backend": self.backend_name,
+        }
         super().setUp()
 
     def test_extract_archive(self) -> None:
@@ -112,3 +118,13 @@ class ArchiveExtractorTestCase(KartonTestCase):
                             children=expected_child.children,
                         )
                         test_cases.insert(0, nested_archive)
+
+
+class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
+    """Same fixture matrix, driven through the 7-Zip backend.
+
+    Deliberately not adjusted for known 7-Zip format gaps (eml, ace, lz)
+    so the failures make the backend capabilities gap explicit.
+    """
+
+    backend_name = "7zip"

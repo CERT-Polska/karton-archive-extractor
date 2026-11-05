@@ -11,7 +11,7 @@ import logging
 import os.path
 from typing import TYPE_CHECKING, Optional
 
-from sflock.abstracts import File as SFLockFile  # type: ignore
+from .backends import ExtractedArchive
 
 if TYPE_CHECKING:
     from .unpacker import ArchiveInfo
@@ -26,7 +26,7 @@ def _get_file_extension(filename: str) -> str:
     return ext.lower()
 
 
-def _classify_children(unpacked: SFLockFile) -> dict[str, list[str]]:
+def _classify_children(unpacked: ExtractedArchive) -> dict[str, list[str]]:
     """
     Classify children by file type.
 
@@ -153,7 +153,7 @@ def _get_executable_score(filename: str, size: int) -> tuple[int, str]:
     return score, ",".join(reasons)
 
 
-def find_best_executable(unpacked: SFLockFile) -> Optional[str]:
+def find_best_executable(unpacked: ExtractedArchive) -> Optional[str]:
     """
     Find the best executable to run from an archive using heuristics.
 
@@ -263,7 +263,7 @@ def _detect_installer_archive(classified: dict[str, list[str]]) -> tuple[bool, s
 
 
 def find_child_by_path(
-    unpacked: SFLockFile,
+    unpacked: ExtractedArchive,
     filepath: str,
 ) -> Optional[str]:
     """
@@ -297,7 +297,7 @@ def find_child_by_path(
 
 
 def determine_if_package(
-    unpacked: SFLockFile,
+    unpacked: ExtractedArchive,
     archive_info: "ArchiveInfo",
 ) -> None:
     """
