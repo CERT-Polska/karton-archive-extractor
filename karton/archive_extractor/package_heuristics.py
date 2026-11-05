@@ -288,7 +288,8 @@ def find_child_by_path(
                     return child_path
             except UnicodeDecodeError:
                 logger.warning(
-                    f"Failed to decode path {child.relapath} as utf8, skipping."
+                    "Failed to decode path %s as utf8, skipping.",
+                    child.relapath.decode("utf8", "backslashreplace"),
                 )
                 continue
 

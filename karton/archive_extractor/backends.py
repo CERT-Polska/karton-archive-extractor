@@ -21,7 +21,36 @@ import logging
 from dataclasses import dataclass, field
 from typing import IO, Any, Protocol, cast, runtime_checkable
 
+from sflock.abstracts import File as SFLockFile
+from sflock.abstracts import Unpacker
+from sflock.unpack.zip7 import ZipFile as SFLockZipFile
+
 logger = logging.getLogger("karton.archive-extractor")
+
+# Monkey-patching for sflock.unpack.zip7.ZipFile.handles
+#
+# Originally it contains additional line that looks for
+# b"Registry.dat", b"AppxManifest.xml" in contents to avoid
+# MSIX files unpacking, but that loads the whole content into
+# memory. We want to avoid that.
+
+
+@functools.wraps(SFLockZipFile.handles)
+def zip_handles(self: SFLockZipFile) -> bool:
+    if (
+        hasattr(self.f, "filename")
+        and self.f.filename
+        and self.f.filename.endswith(self.exts)
+    ):
+        return True
+    if super(SFLockZipFile, self).handles():
+        return True
+    if self.f.stream.read(2) == b"PK":
+        return True
+    return False
+
+
+SFLockZipFile.handles = zip_handles
 
 
 @dataclass(slots=True)
@@ -98,12 +127,6 @@ class SflockBackend:
         filename: bytes,
         password: str | None,
     ) -> ExtractedArchive:
-        from sflock.abstracts import File as SFLockFile  # type: ignore
-        from sflock.abstracts import Unpacker
-        from sflock.unpack.zip7 import ZipFile as SFLockZipFile  # type: ignore
-
-        self._apply_msix_monkeypatch(SFLockZipFile)
-
         # We don't use sflock.unpack because the final step is "identify"
         # which is unnecessary in our case and loads whole file into memory
         sflock_file = SFLockFile.from_path(
@@ -112,35 +135,6 @@ class SflockBackend:
         )
         Unpacker.single(sflock_file, password=password, duplicates=[])
         return self._convert(sflock_file)
-
-    @staticmethod
-    def _apply_msix_monkeypatch(SFLockZipFile: type) -> None:
-        # Monkey-patching for sflock.unpack.zip7.ZipFile.handles
-        #
-        # Originally it contains additional line that looks for
-        # b"Registry.dat", b"AppxManifest.xml" in contents to avoid
-        # MSIX files unpacking, but that loads the whole content into
-        # memory. We want to avoid that.
-
-        # idempotence: patching a patched method would wrap endlessly
-        if getattr(SFLockZipFile.handles, "__wrapped__", None) is not None:
-            return
-
-        @functools.wraps(SFLockZipFile.handles)
-        def zip_handles(self: "SFLockZipFile") -> bool:
-            if (
-                hasattr(self.f, "filename")
-                and self.f.filename
-                and self.f.filename.endswith(self.exts)
-            ):
-                return True
-            if super(SFLockZipFile, self).handles():
-                return True
-            if self.f.stream.read(2) == b"PK":
-                return True
-            return False
-
-        SFLockZipFile.handles = zip_handles
 
     @staticmethod
     def _convert(sflock_file: Any) -> ExtractedArchive:
