@@ -191,8 +191,5 @@ def resolve_backend(name: str | None) -> UnpackBackend:
         name = DEFAULT_BACKEND
     backend_cls = BACKENDS.get(name.strip().lower())
     if backend_cls is None:
-        logger.warning(
-            "Unknown backend name %r, falling back to %r", name, DEFAULT_BACKEND
-        )
-        backend_cls = BACKENDS[DEFAULT_BACKEND]
+        raise RuntimeError(f"Unknown unpacking backend name '{name}'")
     return backend_cls()

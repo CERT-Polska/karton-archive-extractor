@@ -77,9 +77,7 @@ def unpack_7z(
     password_arg = "-p" + (password or "")
 
     result: ExtractedArchive
-    with tempfile.TemporaryDirectory(
-        prefix="karton-ae-7z-", ignore_cleanup_errors=True
-    ) as outdir:
+    with tempfile.TemporaryDirectory(prefix="karton-ae-7z-") as outdir:
         cmd: Tuple[str, ...] = (
             binary,
             "x",  # extract with full directory structure
@@ -153,9 +151,6 @@ def unpack_7z(
                 error=error,
             )
 
-    if os.path.exists(outdir):
-        logger.warning("Extraction directory %r was not fully removed", outdir)
-
     if result.error is not None:
         logger.warning("7z unpacking error for %r: %s", filename, result.error)
     return result
@@ -178,7 +173,7 @@ def _collect_children(outdir: str) -> list[ChildFile]:
             try:
                 stream = open(full_path, "rb")
             except OSError as e:
-                logger.warning("Failed to open extracted file %r: %s", name, e)
+                logger.error("Failed to open extracted file %r: %s", name, e)
                 continue
             relapath = (os.path.relpath(full_path, outdir).replace(os.sep, "/")).encode(
                 "utf-8", "surrogateescape"
