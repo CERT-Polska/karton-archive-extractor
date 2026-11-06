@@ -156,10 +156,14 @@ class SflockBackend:
         )
 
 
-class SevenzipBackend:
-    """Backend driving the official 7-Zip binary (7zz)."""
+class UngooseBackend:
+    """Self-contained extraction backend driving the 7-Zip binary (7zz).
 
-    name = "7zip"
+    Intended to grow native Python unpackers for archive types not covered
+    by the 7-Zip binary, eventually replacing the sflock-based backend.
+    """
+
+    name = "ungoose"
 
     def unpack(
         self,
@@ -173,9 +177,9 @@ class SevenzipBackend:
 
 
 #: Available backends, in the order they should be documented
-BACKENDS: dict[str, type[SflockBackend] | type[SevenzipBackend]] = {
+BACKENDS: dict[str, type[SflockBackend] | type[UngooseBackend]] = {
     SflockBackend.name: SflockBackend,
-    SevenzipBackend.name: SevenzipBackend,
+    UngooseBackend.name: UngooseBackend,
 }
 
 #: Default backend used when the "backend" config option is not set

@@ -6,13 +6,13 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
-from .backends import SevenzipBackend, resolve_backend
+from .backends import UngooseBackend, resolve_backend
 from .unpacker import ArchiveInfo, unpack
 
-# 7-Zip has no e-mail parsers: it would unpack MSG (an OLE compound file)
-# and EML as raw directory trees, emitting internal property streams
-# as children instead of the actual attachments.
-UNSUPPORTED_7ZIP_EXTENSIONS = frozenset({"msg", "eml"})
+# Ungoose backend has no e-mail parsers: it would unpack MSG (an OLE
+# compound file) and EML as raw directory trees, emitting internal
+# property streams as children instead of the actual attachments.
+UNGOOSE_UNSUPPORTED_EXTENSIONS = frozenset({"msg", "eml"})
 
 
 class ArchiveExtractor(Karton):
@@ -53,7 +53,7 @@ class ArchiveExtractor(Karton):
         self.max_children = self.config.getint(
             "archive-extractor", "max_children", fallback=1000
         )
-        # Unpacking backend: "sflock" (default) or "7zip"
+        # Unpacking backend: "sflock" (default) or "ungoose"
         self.unpack_backend = resolve_backend(
             self.config.get("archive-extractor", "backend", fallback=None)
         )
@@ -108,12 +108,12 @@ class ArchiveExtractor(Karton):
             return
 
         if (
-            self.unpack_backend.name == SevenzipBackend.name
-            and task.headers.get("extension") in UNSUPPORTED_7ZIP_EXTENSIONS
+            self.unpack_backend.name == UngooseBackend.name
+            and task.headers.get("extension") in UNGOOSE_UNSUPPORTED_EXTENSIONS
         ):
             self.log.warning(
                 "Skipping %s: e-mail messages (.%s) are not supported by "
-                "the 7zip backend",
+                "the ungoose backend",
                 archive_filename,
                 task.headers.get("extension"),
             )

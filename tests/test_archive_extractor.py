@@ -12,7 +12,7 @@ from .testcases import TEST_CASES, ArchiveFile
 
 class ArchiveExtractorTestCase(KartonTestCase):
     karton_class = ArchiveExtractor
-    # Unpacking backend exercised by this test case ("sflock" or "7zip")
+    # Unpacking backend exercised by this test case ("sflock" or "ungoose")
     backend_name = "sflock"
     # Fixtures (by name) that the backend is known not to cover, with the
     # reason as the value. They are skipped in test_extract_archive and
@@ -147,25 +147,25 @@ class ArchiveExtractorTestCase(KartonTestCase):
                 self._run_archive_case(archive, test_cases)
 
 
-class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
-    """Same fixture matrix, driven through the 7-Zip backend.
+class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
+    """Same fixture matrix, driven through the ungoose backend.
 
-    Fixtures covering capabilities the 7-Zip backend is known to lack are
+    Fixtures covering capabilities the ungoose backend is known to lack are
     excluded from the main matrix and get dedicated xfail-marked tests
     below, so the gaps stay visible until they are properly decided on
     (native shims, dropping fixtures, or documented non-support).
     """
 
-    backend_name = "7zip"
+    backend_name = "ungoose"
 
     KNOWN_UNSUPPORTED = {
         "archive.eml": (
-            "7-Zip backend has no e-mail parsers: EML messages are refused "
+            "ungoose backend has no e-mail parsers: EML messages are refused "
             "in ArchiveExtractor.process before extraction. Configure the "
             "sflock backend to extract EML files"
         ),
         "archive.msg": (
-            "7-Zip backend has no e-mail parsers: MSG messages are refused "
+            "ungoose backend has no e-mail parsers: MSG messages are refused "
             "in ArchiveExtractor.process before extraction, instead of "
             "unpacking the OLE compound file as a plain directory tree "
             "(property streams instead of attachments). Configure the "
@@ -176,8 +176,8 @@ class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
             "lzip (.lz) archives are not extractable by the 7-Zip binary",
         ),
         "bloated.tgz": (
-            "sflock unpacks nested archives internally (tgz -> tar -> exe), while the 7-Zip "
-            "backend yields the intermediate .tar which is unpacked on the next "
+            "sflock unpacks nested archives internally (tgz -> tar -> exe), while the "
+            "ungoose backend yields the intermediate .tar which is unpacked on the next "
             "service hop. This will be covered in future versions."
         ),
     }

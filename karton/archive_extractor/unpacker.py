@@ -336,7 +336,7 @@ if __name__ == "__main__":
         "--backend",
         type=str,
         default=None,
-        help="Unpacking backend: sflock (default) or 7zip",
+        help="Unpacking backend: sflock (default) or ungoose",
     )
     args = parser.parse_args()
 

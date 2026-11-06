@@ -1,5 +1,5 @@
 """
-7-Zip unpacking backend.
+7-Zip unpacking engine used by the ungoose backend.
 
 Drives the official 7-Zip command line binary (``7zz``, or legacy ``7z``)
 as a child process to safely unpack archives, mirroring the unpacking
