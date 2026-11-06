@@ -35,7 +35,7 @@ SEVENZIP_BIN: Optional[str] = None
 
 # Hard cap for a single unpacking attempt. Malicious archives may try to
 # exhaust CPU by decompressing endlessly; the process is killed afterwards.
-DEFAULT_TIMEOUT = 300.0
+DEFAULT_TIMEOUT = 60.0
 
 
 def find_7z_binary() -> str:
@@ -47,7 +47,7 @@ def find_7z_binary() -> str:
         if path is not None:
             return path
     raise RuntimeError(
-        "7-Zip binary not found: install 7-Zip (e.g. the official 7zz " "static build)"
+        "7-Zip binary not found: install 7-Zip (e.g. the official 7zz static build)"
     )
 
 
@@ -70,11 +70,7 @@ def unpack_7z(
 ) -> ExtractedArchive:
     """Unpack an archive with 7-Zip, returning extracted children.
 
-    Never raises on unpacking failures; reports them via ``error``:
-    - no children + error: archive failed to unpack entirely (wrong
-      password, corrupted, or unrecognized format),
-    - children + no error: fully successful extraction,
-    - children + error: partially successful extraction.
+    Reports unpacking failures via ``error`` field of ExtractedArchive.
     """
     binary = find_7z_binary()
     archive_path = os.path.abspath(os.fsdecode(filepath))
@@ -91,7 +87,7 @@ def unpack_7z(
             "-mmt=off",  # single-threaded decompression
             password_arg,
             "-o" + outdir,
-            "--",  # everything after this is a filename, not a switch
+            "--",
             archive_path,
         )
 
