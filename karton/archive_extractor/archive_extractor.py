@@ -6,8 +6,13 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
-from .backends import resolve_backend
+from .backends import SevenzipBackend, resolve_backend
 from .unpacker import ArchiveInfo, unpack
+
+# 7-Zip has no e-mail parsers: it would unpack MSG (an OLE compound file)
+# and EML as raw directory trees, emitting internal property streams
+# as children instead of the actual attachments.
+UNSUPPORTED_7ZIP_EXTENSIONS = frozenset({"msg", "eml"})
 
 
 class ArchiveExtractor(Karton):
@@ -99,6 +104,18 @@ class ArchiveExtractor(Karton):
         if extraction_level > self.max_depth:
             self.log.warning(
                 "Maximum extraction depth exceeded. Can't extract this archive."
+            )
+            return
+
+        if (
+            self.unpack_backend.name == SevenzipBackend.name
+            and task.headers.get("extension") in UNSUPPORTED_7ZIP_EXTENSIONS
+        ):
+            self.log.warning(
+                "Skipping %s: e-mail messages (.%s) are not supported by "
+                "the 7zip backend",
+                archive_filename,
+                task.headers.get("extension"),
             )
             return
 

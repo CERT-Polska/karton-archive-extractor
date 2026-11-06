@@ -160,14 +160,16 @@ class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
 
     KNOWN_UNSUPPORTED = {
         "archive.eml": (
-            "7-Zip backend has no EML parser"
+            "7-Zip backend has no e-mail parsers: EML messages are refused "
+            "in ArchiveExtractor.process before extraction. Configure the "
+            "sflock backend to extract EML files"
         ),
         "archive.msg": (
-            "7-Zip backend has no MSG parser: the OLE compound file is unpacked "
-            "as a plain directory tree, emitting internal property streams "
-            "(e.g. __substg1.0_*) instead of the attachments, e.g. "
-            "'invoice_5839.exe' is reported as '__attach_version1.0_#00000000/"
-            "__substg1.0_37010102'."
+            "7-Zip backend has no e-mail parsers: MSG messages are refused "
+            "in ArchiveExtractor.process before extraction, instead of "
+            "unpacking the OLE compound file as a plain directory tree "
+            "(property streams instead of attachments). Configure the "
+            "sflock backend to extract MSG files"
         ),
         "archive.ace": ("ACE archive format is not supported by any 7-Zip version."),
         "archive.lz": (
