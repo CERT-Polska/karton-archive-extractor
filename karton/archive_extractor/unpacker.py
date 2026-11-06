@@ -1,4 +1,3 @@
-import functools
 import logging
 import mmap
 import os
@@ -8,10 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Iterator, Optional, Tuple, cast
 
-from sflock.abstracts import File as SFLockFile  # type: ignore
-from sflock.abstracts import Unpacker
-from sflock.unpack.zip7 import ZipFile as SFLockZipFile  # type: ignore
-
+from .backends import ChildFile, ExtractedArchive, UnpackBackend, resolve_backend
 from .package_heuristics import determine_if_package
 
 try:
@@ -29,13 +25,6 @@ COMMON_PASSWORDS = [
 ]
 
 logger = logging.getLogger("karton.archive-extractor")
-
-# Monkey-patching for sflock.unpack.zip7.ZipFile.handles
-#
-# Originally it contains additional line that looks for
-# b"Registry.dat", b"AppxManifest.xml" in contents to avoid
-# MSIX files unpacking , but that loads the whole content into
-# memory. We want to avoid that.
 
 
 @dataclass(slots=True)
@@ -57,39 +46,8 @@ class ArchiveInfo:
     files: list[dict[str, str | int]] = field(default_factory=list)
 
 
-@functools.wraps(SFLockZipFile.handles)
-def zip_handles(self: SFLockZipFile) -> bool:
-    if (
-        hasattr(self.f, "filename")
-        and self.f.filename
-        and self.f.filename.endswith(self.exts)
-    ):
-        return True
-    if super(SFLockZipFile, self).handles():
-        return True
-    if self.f.stream.read(2) == b"PK":
-        return True
-    return False
-
-
-SFLockZipFile.handles = zip_handles
-
-
-def sflock_unpack(
-    filepath_bytes: bytes, filename_bytes: bytes, password: str | None
-) -> SFLockFile:
-    # We don't use sflock.unpack because the final step is "identify"
-    # which is unnecessary in our case and loads whole file into memory
-    sflock_file = SFLockFile.from_path(
-        filepath=filepath_bytes,
-        filename=filename_bytes,
-    )
-    Unpacker.single(sflock_file, password=password, duplicates=[])
-    return sflock_file
-
-
 def debloat_pe(
-    filename: str, child: SFLockFile, max_size: int
+    filename: str, child: ChildFile, max_size: int
 ) -> Optional[Tuple[str, IO[bytes]]]:
     def log_message_wrapped(message: str, *args, **kwargs) -> None:
         logger.info(message)
@@ -142,7 +100,8 @@ def try_unpack(
     filename: str,
     password: str | None,
     archive_info: ArchiveInfo,
-) -> Optional[SFLockFile]:
+    backend: UnpackBackend,
+) -> Optional[ExtractedArchive]:
     try:
         passwords: list[str | None]
         if password is not None:
@@ -157,9 +116,9 @@ def try_unpack(
             if password is not None:
                 logger.info("Trying to unpack archive using password '%s'", password)
 
-            unpacked = sflock_unpack(
-                filepath_bytes=file.name.encode("utf-8"),
-                filename_bytes=filename.encode("utf-8"),
+            unpacked = backend.unpack(
+                filepath=file.name.encode("utf-8"),
+                filename=filename.encode("utf-8"),
                 password=password,
             )
 
@@ -171,7 +130,7 @@ def try_unpack(
 
             has_contents = False
 
-            unpacked_children: list[SFLockFile] = unpacked.children
+            unpacked_children: list[ChildFile] = unpacked.children
 
             for child in unpacked_children:
                 if not child.stream.read(1):
@@ -200,7 +159,7 @@ def try_unpack(
     return unpacked
 
 
-def _child_path(child: SFLockFile) -> str:
+def _child_path(child: ChildFile) -> str:
     """
     Return the path of a child within the archive.
     Use relapath to preserve directory structure within archive
@@ -220,6 +179,7 @@ def unpack(
     max_children: int,
     max_size: int,
     archive_info: ArchiveInfo,
+    backend: UnpackBackend,
 ) -> Iterator[Tuple[str, IO[bytes]]]:
     """
     Unpack archive and yield all children.
@@ -227,7 +187,9 @@ def unpack(
     Package detection information is stored in archive_info but doesn't
     affect child extraction - all children are always yielded.
     """
-    unpacked = try_unpack(file, filename, password, archive_info=archive_info)
+    unpacked = try_unpack(
+        file, filename, password, archive_info=archive_info, backend=backend
+    )
 
     if not unpacked:
         logger.warning("We're unable to unpack this archive")
@@ -370,7 +332,15 @@ if __name__ == "__main__":
         default=None,
         help="Path to file within archive to execute (for package mode)",
     )
+    parser.add_argument(
+        "--backend",
+        type=str,
+        default=None,
+        help="Unpacking backend: sflock (default) or ungoose",
+    )
     args = parser.parse_args()
+
+    backend = resolve_backend(args.backend)
 
     archive_info = ArchiveInfo(
         name=args.file,
@@ -386,6 +356,7 @@ if __name__ == "__main__":
             max_size=args.max_size,
             max_children=args.max_children,
             archive_info=archive_info,
+            backend=backend,
         ):
             logger.info("Unpacked file: %s", name)
             if not args.dry_run:

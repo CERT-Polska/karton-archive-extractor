@@ -6,7 +6,13 @@ from karton.core.backend import KartonBackend
 from karton.core.config import Config
 
 from .__version__ import __version__
+from .backends import UngooseBackend, resolve_backend
 from .unpacker import ArchiveInfo, unpack
+
+# Ungoose backend has no e-mail parsers: it would unpack MSG (an OLE
+# compound file) and EML as raw directory trees, emitting internal
+# property streams as children instead of the actual attachments.
+UNGOOSE_UNSUPPORTED_EXTENSIONS = frozenset({"msg", "eml"})
 
 
 class ArchiveExtractor(Karton):
@@ -47,6 +53,11 @@ class ArchiveExtractor(Karton):
         self.max_children = self.config.getint(
             "archive-extractor", "max_children", fallback=1000
         )
+        # Unpacking backend: "sflock" (default) or "ungoose"
+        self.unpack_backend = resolve_backend(
+            self.config.get("archive-extractor", "backend", fallback=None)
+        )
+        self.log.info("Using unpacking backend: %s", self.unpack_backend.name)
 
     def _get_password(self, task: Task) -> Optional[str]:
         password = task.get_payload("password", default=None)
@@ -96,6 +107,18 @@ class ArchiveExtractor(Karton):
             )
             return
 
+        if (
+            self.unpack_backend.name == UngooseBackend.name
+            and task.headers.get("extension") in UNGOOSE_UNSUPPORTED_EXTENSIONS
+        ):
+            self.log.warning(
+                "Skipping %s: e-mail messages (.%s) are not supported by "
+                "the ungoose backend",
+                archive_filename,
+                task.headers.get("extension"),
+            )
+            return
+
         with sample.download_temporary_file() as tmp_archive_file:
             archive_info = ArchiveInfo(
                 archive_filename,
@@ -110,6 +133,7 @@ class ArchiveExtractor(Karton):
                 max_children=self.max_children,
                 max_size=self.max_size,
                 archive_info=archive_info,
+                backend=self.unpack_backend,
             ):
                 # Extract basename for child resource name
                 # (paths in archives may include dirs)

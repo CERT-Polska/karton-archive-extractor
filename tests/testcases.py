@@ -93,6 +93,19 @@ TEST_CASES = [
         ]
     ),
     ArchiveFile(
+        path=TESTFILES_DIR / "archive.msg",
+        children=[
+            UnpackedFile(
+                name="invoice_5839.exe",
+                sha256="c27384ada62098bfea7a33e2e9a957f054b58a29c07637966e3dcf3afbd96188",
+            ),
+            UnpackedFile(
+                name="shipment_details.txt",
+                sha256="364ffd0cbf17018fa68f7ee7312e59db5824a8a1ee9634a41399ced58f808596",
+            ),
+        ],
+    ),
+    ArchiveFile(
         path=TESTFILES_DIR / "archive.lzh",
         children=[
             UnpackedFile(

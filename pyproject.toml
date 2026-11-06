@@ -8,3 +8,9 @@ line_length = 88
 
 [tool.black]
 exclude = '(sflock)'
+
+[tool.mypy]
+
+[[tool.mypy.overrides]]
+module = "sflock.*"
+ignore_missing_imports = true
