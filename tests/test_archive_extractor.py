@@ -162,6 +162,13 @@ class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
         "archive.eml": (
             "7-Zip backend has no EML parser"
         ),
+        "archive.msg": (
+            "7-Zip backend has no MSG parser: the OLE compound file is unpacked "
+            "as a plain directory tree, emitting internal property streams "
+            "(e.g. __substg1.0_*) instead of the attachments, e.g. "
+            "'invoice_5839.exe' is reported as '__attach_version1.0_#00000000/"
+            "__substg1.0_37010102'."
+        ),
         "archive.ace": ("ACE archive format is not supported by any 7-Zip version."),
         "archive.lz": (
             "lzip (.lz) archives are not extractable by the 7-Zip binary",
@@ -177,6 +184,10 @@ class SevenzipArchiveExtractorTestCase(ArchiveExtractorTestCase):
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.eml"], strict=False)
     def test_xfail_eml(self) -> None:
         self._run_single_case("archive.eml")
+
+    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.msg"], strict=False)
+    def test_xfail_msg(self) -> None:
+        self._run_single_case("archive.msg")
 
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.ace"], strict=False)
     def test_xfail_ace(self) -> None:
