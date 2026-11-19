@@ -15,6 +15,7 @@ relies on, so backend implementations are drop-in replaceable:
 - ``close()``: releases the underlying stream
 """
 
+from enum import StrEnum, auto
 import functools
 import hashlib
 import logging
@@ -170,7 +171,6 @@ class SflockBackend:
 
 class SpecialFormat(StrEnum):
     """Archive formats not handled by 7zip, that need dedicated unpackers in ungoose"""
-
     eml = auto()
     msg = auto()
 
