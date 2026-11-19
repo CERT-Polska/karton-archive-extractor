@@ -157,7 +157,6 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
     backend_name = "ungoose"
 
     KNOWN_UNSUPPORTED = {
-        "archive.ace": ("ACE archive format is not supported by any 7-Zip version."),
         "archive.lz": ("lzip (.lz) archives are not extractable by the 7-Zip binary",),
         "bloated.tgz": (
             "sflock unpacks nested archives internally (tgz -> tar -> exe), while the "
@@ -166,10 +165,6 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
         ),
     }
     known_unsupported = KNOWN_UNSUPPORTED
-
-    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.ace"], strict=False)
-    def test_xfail_ace(self) -> None:
-        self._run_single_case("archive.ace")
 
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.lz"], strict=False)
     def test_xfail_lz(self) -> None:
