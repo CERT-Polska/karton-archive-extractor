@@ -13,14 +13,14 @@ jobs:
       - uses: CERT-Polska/lint-python-action@v2
         with:
           source: karton/
-          python-version: '3.10'
+          python-version: '3.14'
   test:
     # Ubuntu 24.04 is required by zipjail contained in sflock (at least 0.3.89)
     # We can move back to -latest after we fix that issue
     runs-on: ubuntu-24.04
     strategy:
       matrix:
-        minor: [ 10, 11, 12 ]
+        minor: [ 12, 13, 14 ]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -28,5 +28,14 @@ jobs:
           python-version: 3.${{ matrix.minor }}
       - name: Install unpackers
         run: sudo apt install -y p7zip-full rar unace-nonfree cabextract lzip zlib1g-dev zpaq gnupg
+      - name: Install pinned 7-Zip (required by ungoose backend for newest RAR methods)
+        run: |
+          curl -fsSL -o /tmp/7z.tar.xz \
+            "https://github.com/ip7z/7zip/releases/download/26.05/7z2605-linux-x64.tar.xz"
+          echo "22cf82fcc6eb7474f1d5bb4f02c0f8ebd573a718089d6833dc30f8350a3b232e  /tmp/7z.tar.xz" | sha256sum -c -
+          mkdir -p /tmp/7z-dist
+          tar -xJf /tmp/7z.tar.xz -C /tmp/7z-dist
+          sudo install -m 0755 /tmp/7z-dist/7zzs /usr/local/bin/7zz
+          7zz i >/dev/null
       - run: pip install -r requirements.txt -r requirements-debloat.txt pytest==8.4.2 pytest-subtests==0.14.2
       - run: pytest

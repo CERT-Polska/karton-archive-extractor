@@ -115,9 +115,7 @@ class ArchiveExtractorTestCase(KartonTestCase):
             )
             if expected_child.children:
                 # Test nested archive
-                content = self.backend.download_object(
-                    self.backend.default_bucket_name, child.uid
-                )
+                content = self.backend.download_resource(child)
                 nested_archive_name = pathlib.PurePath("./" + expected_child.name)
                 if expected_child.real_extension:
                     nested_archive_name = nested_archive_name.with_suffix(

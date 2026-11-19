@@ -32,6 +32,11 @@ class ArchiveExtractor(Karton):
             "executable_package": "!True",
         },
     ]
+    egress_filters = [
+        {"type": "sample", "kind": "raw"},
+        {"type": "sample", "stage": "analyzed"},
+        {"type": "sample", "kind": "archive", "executable_package": "True"},
+    ]
 
     def __init__(
         self,

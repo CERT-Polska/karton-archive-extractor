@@ -1,4 +1,4 @@
-FROM python:3.12
+FROM python:3.14-slim-trixie
 SHELL ["/bin/bash", "-c"]
 
 # Native unpackers that sflock shells out to (formats beyond 7-Zip
@@ -11,6 +11,8 @@ RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list.d/debian.sources \
     lzip \
     zlib1g-dev \
     zpaq \
+    curl \
+    xz-utils \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -28,11 +30,11 @@ RUN curl -fsSL -o /tmp/7z.tar.xz \
 
 WORKDIR /app/service
 COPY ./requirements.txt ./requirements-debloat.txt ./
-RUN pip install -r requirements.txt
-RUN pip install --no-deps -r requirements-debloat.txt
+RUN pip install --no-cache-dir -r requirements.txt setuptools
+RUN pip install --no-cache-dir --no-deps -r requirements-debloat.txt
 COPY ./README.md ./README.md
 COPY ./MANIFEST.in ./MANIFEST.in
 COPY ./karton ./karton
 COPY ./setup.py ./setup.py
-RUN pip install .
-ENTRYPOINT karton-archive-extractor
+RUN pip install --no-cache-dir .
+ENTRYPOINT ["karton-archive-extractor"]
