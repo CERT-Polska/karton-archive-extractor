@@ -18,6 +18,7 @@ relies on, so backend implementations are drop-in replaceable:
 import functools
 import hashlib
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import IO, Any, Protocol, cast, runtime_checkable
 
@@ -171,6 +172,18 @@ class UngooseBackend:
         filename: bytes,
         password: str | None,
     ) -> ExtractedArchive:
+
+        from .email import MailFormat
+
+        # extension is set in 'process' from task's 'extension' header
+        ext = (
+            os.path.splitext(filename.decode("utf-8", "replace"))[1].lstrip(".").lower()
+        )
+        if fmt := MailFormat(ext) if ext in MailFormat else None:
+            from .email import EmailUnpacker
+
+            return EmailUnpacker().unpack(filepath, filename, fmt)
+
         from .sevenzip import unpack_7z
 
         return unpack_7z(filepath, filename, password)
