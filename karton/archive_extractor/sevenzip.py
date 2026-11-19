@@ -26,7 +26,7 @@ import subprocess
 import tempfile
 from typing import Optional, Tuple
 
-from .backends import ChildFile, ExtractedArchive
+from .backends import ExtractedArchive, collect_children
 
 logger = logging.getLogger("karton.archive-extractor.sevenzip")
 
@@ -144,7 +144,7 @@ def unpack_7z(
                     f"{_error_summary(stderr or b'')}"
                 )
 
-            children = _collect_children(outdir)
+            children = collect_children(outdir)
             result = ExtractedArchive(
                 filename=filename,
                 children=children,
@@ -154,37 +154,3 @@ def unpack_7z(
     if result.error is not None:
         logger.warning("7z unpacking error for %r: %s", filename, result.error)
     return result
-
-
-def _collect_children(outdir: str) -> list[ChildFile]:
-    """Walk the extraction directory and open every regular file.
-
-    Symlinks are skipped: they cannot be represented as sample streams
-    and 7-Zip refuses to create links escaping the output directory.
-    Children are sorted by path for deterministic listings.
-    """
-    children: list[ChildFile] = []
-    for root, _dirs, files in os.walk(outdir, followlinks=False):
-        for name in files:
-            full_path = os.path.join(root, name)
-            if os.path.islink(full_path):
-                logger.warning("Skipping symlink child %r", name)
-                continue
-            try:
-                stream = open(full_path, "rb")
-            except OSError as e:
-                logger.error("Failed to open extracted file %r: %s", name, e)
-                continue
-            relapath = (os.path.relpath(full_path, outdir).replace(os.sep, "/")).encode(
-                "utf-8", "surrogateescape"
-            )
-            children.append(
-                ChildFile(
-                    relapath=relapath,
-                    filename=relapath.rsplit(b"/", 1)[-1],
-                    filesize=os.fstat(stream.fileno()).st_size,
-                    stream=stream,
-                )
-            )
-    children.sort(key=lambda child: child.relapath)
-    return children
