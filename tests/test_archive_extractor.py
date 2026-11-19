@@ -157,22 +157,8 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
     backend_name = "ungoose"
 
     KNOWN_UNSUPPORTED = {
-        "archive.eml": (
-            "ungoose backend has no e-mail parsers: EML messages are refused "
-            "in ArchiveExtractor.process before extraction. Configure the "
-            "sflock backend to extract EML files"
-        ),
-        "archive.msg": (
-            "ungoose backend has no e-mail parsers: MSG messages are refused "
-            "in ArchiveExtractor.process before extraction, instead of "
-            "unpacking the OLE compound file as a plain directory tree "
-            "(property streams instead of attachments). Configure the "
-            "sflock backend to extract MSG files"
-        ),
         "archive.ace": ("ACE archive format is not supported by any 7-Zip version."),
-        "archive.lz": (
-            "lzip (.lz) archives are not extractable by the 7-Zip binary",
-        ),
+        "archive.lz": ("lzip (.lz) archives are not extractable by the 7-Zip binary",),
         "bloated.tgz": (
             "sflock unpacks nested archives internally (tgz -> tar -> exe), while the "
             "ungoose backend yields the intermediate .tar which is unpacked on the next "
@@ -180,14 +166,6 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
         ),
     }
     known_unsupported = KNOWN_UNSUPPORTED
-
-    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.eml"], strict=False)
-    def test_xfail_eml(self) -> None:
-        self._run_single_case("archive.eml")
-
-    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.msg"], strict=False)
-    def test_xfail_msg(self) -> None:
-        self._run_single_case("archive.msg")
 
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.ace"], strict=False)
     def test_xfail_ace(self) -> None:
