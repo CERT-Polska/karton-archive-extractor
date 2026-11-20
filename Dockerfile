@@ -13,6 +13,7 @@ RUN sed -i 's/ main/ main non-free/' /etc/apt/sources.list.d/debian.sources \
     zpaq \
     curl \
     xz-utils \
+    libmagic1 \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
