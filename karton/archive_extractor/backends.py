@@ -163,13 +163,16 @@ class SflockBackend:
             error=(
                 sflock_file.error
                 if isinstance(sflock_file.error, str)
-                else str(sflock_file.error) if sflock_file.error else None
+                else str(sflock_file.error)
+                if sflock_file.error
+                else None
             ),
         )
 
 
 class SpecialFormat(StrEnum):
     """Archive formats not handled by 7zip, that need dedicated unpackers in ungoose"""
+
     eml = auto()
     msg = auto()
 
