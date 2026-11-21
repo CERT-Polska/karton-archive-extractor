@@ -98,6 +98,41 @@ class ExtractedArchive:
             child.close()
 
 
+def collect_children(outdir: str) -> list[ChildFile]:
+    """Walk an extraction directory and open every regular file.
+
+    Shared by the ungoose unpacking engines. Symlinks are skipped: they
+    cannot be represented as sample streams and extractors refuse to
+    create links escaping the output directory. Children are sorted by
+    path for deterministic listings.
+    """
+    children: list[ChildFile] = []
+    for root, _dirs, files in os.walk(outdir, followlinks=False):
+        for name in files:
+            full_path = os.path.join(root, name)
+            if os.path.islink(full_path):
+                logger.warning("Skipping symlink child %r", name)
+                continue
+            try:
+                stream = open(full_path, "rb")
+            except OSError as e:
+                logger.error("Failed to open extracted file %r: %s", name, e)
+                continue
+            relapath = (os.path.relpath(full_path, outdir).replace(os.sep, "/")).encode(
+                "utf-8", "surrogateescape"
+            )
+            children.append(
+                ChildFile(
+                    relapath=relapath,
+                    filename=relapath.rsplit(b"/", 1)[-1],
+                    filesize=os.fstat(stream.fileno()).st_size,
+                    stream=stream,
+                )
+            )
+    children.sort(key=lambda child: child.relapath)
+    return children
+
+
 @runtime_checkable
 class UnpackBackend(Protocol):
     """Interface every unpacking backend must implement."""
@@ -163,15 +198,19 @@ class SflockBackend:
             error=(
                 sflock_file.error
                 if isinstance(sflock_file.error, str)
-                else str(sflock_file.error) if sflock_file.error else None
+                else str(sflock_file.error)
+                if sflock_file.error
+                else None
             ),
         )
 
 
 class SpecialFormat(StrEnum):
     """Archive formats not handled by 7zip, that need dedicated unpackers in ungoose"""
+
     eml = auto()
     msg = auto()
+    ace = auto()
 
 
 class UngooseBackend:
@@ -207,6 +246,10 @@ class UngooseBackend:
                 from .email import unpack_email
 
                 return unpack_email(filepath, filename, fmt)
+            case SpecialFormat.ace:
+                from .ace import unpack_ace
+
+                return unpack_ace(filepath, filename, password)
             case _:
                 from .sevenzip import unpack_7z
 
