@@ -15,13 +15,13 @@ relies on, so backend implementations are drop-in replaceable:
 - ``close()``: releases the underlying stream
 """
 
-from enum import StrEnum, auto
 import functools
 import hashlib
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import IO, Any, Protocol, cast, runtime_checkable, Optional
+from enum import StrEnum, auto
+from typing import IO, Any, Optional, Protocol, cast, runtime_checkable
 
 from sflock.abstracts import File as SFLockFile
 from sflock.abstracts import Unpacker
@@ -163,9 +163,7 @@ class SflockBackend:
             error=(
                 sflock_file.error
                 if isinstance(sflock_file.error, str)
-                else str(sflock_file.error)
-                if sflock_file.error
-                else None
+                else str(sflock_file.error) if sflock_file.error else None
             ),
         )
 

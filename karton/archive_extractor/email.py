@@ -107,7 +107,10 @@ def _safe_relapath(filename: Optional[str], fallback: str) -> bytes:
         filename = filename.lstrip(".")[:255]  # limit filename to 255 chars
     if not filename:
         filename = fallback
-    return filename.encode("utf-8", "surrogateescape")
+    try:
+        return filename.encode("utf-8", "surrogateescape")
+    except UnicodeEncodeError:
+        return filename.encode("utf-8", "replace")
 
 
 def _payload_bytes(payload: object) -> Optional[bytes]:
@@ -199,7 +202,9 @@ def _unpack_eml(filepath: bytes, filename: bytes) -> ExtractedArchive:
         return ExtractedArchive(filename=filename, error=f"Failed to parse EML: {e!r}")
 
     if message is None:
-        return ExtractedArchive(filename=filename, error="Failed to parse EML: message is empty")
+        return ExtractedArchive(
+            filename=filename, error="Failed to parse EML: message is empty"
+        )
 
     children: list[ChildFile] = []
     attachment_index = 0
