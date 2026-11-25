@@ -203,15 +203,14 @@ class UngooseBackend:
         filename: bytes,
         password: str | None,
     ) -> ExtractedArchive:
-        match fmt := self.special_fmt(filename):
-            case SpecialFormat.msg | SpecialFormat.eml:
-                from .email import unpack_email
+        from .email import unpack_email
+        from .sevenzip import unpack_7z
 
-                return unpack_email(filepath, filename, fmt)
-            case _:
-                from .sevenzip import unpack_7z
-
-                return unpack_7z(filepath, filename, password)
+        fmt = self.special_fmt(filename)
+        if fmt in (SpecialFormat.msg, SpecialFormat.eml):
+            return unpack_email(filepath, filename, fmt)
+        else:
+            return unpack_7z(filepath, filename, password)
 
 
 #: Available backends, in the order they should be documented
