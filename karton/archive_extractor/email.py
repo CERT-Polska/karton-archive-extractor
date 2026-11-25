@@ -92,7 +92,7 @@ def _try_decode_mime_header(value: str) -> str:
     try:
         return str(email.header.make_header(email.header.decode_header(value)))
     except Exception:
-        logger.warning(f"failed to decode mime header: {value}")
+        logger.warning("Failed to decode mime header: %r", value, exc_info=True)
         return value
 
 
@@ -199,10 +199,10 @@ def _unpack_eml(filepath: bytes, filename: bytes) -> ExtractedArchive:
     try:
         message = email.parser.BytesParser().parsebytes(data, headersonly=False)
     except Exception as e:
-        return ExtractedArchive(filename=filename, error=f"Failed to parse EML: {e}")
+        return ExtractedArchive(filename=filename, error=f"Failed to parse EML: {e!r}")
 
     if message is None:
-        return ExtractedArchive(filename=filename, error="Failed to parse EML")
+        return ExtractedArchive(filename=filename, error="Failed to parse EML: message is empty")
 
     children: list[ChildFile] = []
     attachment_index = 0
@@ -221,7 +221,7 @@ def _unpack_eml(filepath: bytes, filename: bytes) -> ExtractedArchive:
             try:
                 payload = _payload_bytes(part.get_payload(decode=True))
             except Exception as e:
-                logger.warning("Failed to decode EML part: %s", e)
+                logger.warning("Failed to decode EML part: %r", e, exc_info=True)
                 continue
             if payload is None:
                 continue
@@ -248,7 +248,7 @@ def _unpack_msg(filepath: bytes, filename: bytes) -> ExtractedArchive:
         ole = olefile.OleFileIO(filepath)
     except Exception as e:
         return ExtractedArchive(
-            filename=filename, error=f"Failed to parse MSG as OLE file: {e}"
+            filename=filename, error=f"Failed to parse MSG as OLE file: {e!r}"
         )
 
     try:
@@ -257,7 +257,7 @@ def _unpack_msg(filepath: bytes, filename: bytes) -> ExtractedArchive:
             children = _msg_children(ole, (), outdir, ansi_codec, itertools.count())
     except Exception as e:
         logger.exception("MSG unpacking failed for %r", filename)
-        return ExtractedArchive(filename=filename, error=f"MSG unpacking failed: {e}")
+        return ExtractedArchive(filename=filename, error=f"MSG unpacking failed: {e!r}")
     finally:
         ole.close()
 
@@ -362,7 +362,7 @@ def _unwrap_ole_package(data: bytes) -> Optional[tuple[bytes, Optional[str]]]:
     try:
         native = OleNativeStream(bindata=data)
     except Exception as e:
-        logger.debug("Not an OLE native stream: %s", e)
+        logger.debug("Not an OLE native stream: %r", e, exc_info=True)
         return None
     if native.is_link or not native.data:
         return None
@@ -391,7 +391,7 @@ def _child_from_payload(
             f.write(payload)
         stream: IO[bytes] = open(disk_path, "rb")
     except OSError as e:
-        logger.error("Failed to write extracted e-mail child: %s", e)
+        logger.error("Failed to write extracted e-mail child: %r", e, exc_info=True)
         return None
     return ChildFile(
         relapath=relapath,

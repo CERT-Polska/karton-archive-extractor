@@ -104,7 +104,7 @@ class UnpackBackend(Protocol):
 
     name: str
 
-    def handles_password(self, filename: bytes):
+    def handles_password(self, filename: bytes) -> bool:
         """Based on extension from filename decide if backend should be
         retried multiple times with common passwords.
         """
@@ -145,7 +145,7 @@ class SflockBackend:
         return self._convert(sflock_file)
 
     @classmethod
-    def handles_password(self, filename: bytes):
+    def handles_password(self, filename: bytes) -> bool:
         return True
 
     @staticmethod
@@ -187,7 +187,7 @@ class UngooseBackend:
     name = "ungoose"
 
     @classmethod
-    def handles_password(self, filename: bytes):
+    def handles_password(self, filename: bytes) -> bool:
         fmt = self.special_fmt(filename)
         return fmt not in [SpecialFormat.msg, SpecialFormat.eml]
 
