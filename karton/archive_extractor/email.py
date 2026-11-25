@@ -179,10 +179,7 @@ def unpack_email(
     elif fmt is SpecialFormat.eml:
         result = _unpack_eml(filepath, filename)
     else:
-        result = ExtractedArchive(
-            filename=filename,
-            error="Not an e-mail message.",
-        )
+        raise ValueError("fmt argument must be an e-mail message format")
     if result.error is not None:
         logger.warning("E-mail unpacking error for %r: %s", filename, result.error)
     return result
