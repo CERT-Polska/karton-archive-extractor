@@ -2,4 +2,3 @@ karton-core>=6.1.0,<7.0.0
 SFlock2[linux]==0.3.85
 olefile>=0.46
 oletools>=0.60
-acefile>=0.6.14

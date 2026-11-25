@@ -1,8 +1,8 @@
 """
 ACE archive unpacking for the ungoose backend.
 
-Uses the pure-Python-capable ``acefile`` package (with its optional C
-accelerator which can be disabled with ACEFILE_FORCE_ACEBITSTREAM=0).
+Uses the vendored ``acefile`` (``thirdparty.acefile``, upstream 0.6.14)
+with the optional C accelerator disabled.
 
 Extraction semantics mirror sevenzip.py:
 
@@ -20,9 +20,8 @@ import os
 import tempfile
 from typing import Optional
 
-import acefile
-
 from .backends import ExtractedArchive, collect_children
+from .thirdparty import acefile
 
 logger = logging.getLogger("karton.archive-extractor.ace")
 
