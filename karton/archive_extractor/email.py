@@ -28,9 +28,7 @@ from typing import IO, Iterator, Optional
 import olefile
 from oletools.oleobj import OleNativeStream
 
-from karton.archive_extractor.backends import SpecialFormat
-
-from .backends import ChildFile, ExtractedArchive
+from .backends import ChildFile, ExtractedArchive, SpecialFormat
 
 logger = logging.getLogger("karton.archive-extractor.email")
 
