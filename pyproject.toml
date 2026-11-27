@@ -9,8 +9,17 @@ line_length = 88
 [tool.black]
 exclude = '(sflock)'
 
+[tool.lint-python]
+lint-version = "2"
+source = "karton/"
+extra-requirements = "types-olefile"
+
 [tool.mypy]
 
 [[tool.mypy.overrides]]
 module = "sflock.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["oletools.*"]
 ignore_missing_imports = true

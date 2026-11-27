@@ -1,0 +1,8 @@
+From: sender@example.test
+To: recipient@example.test
+Subject: Message body only
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+MIME-Version: 1.0
+
+This is the body of the test message.

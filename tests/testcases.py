@@ -2,6 +2,7 @@ import dataclasses
 from pathlib import Path, PurePath
 from types import EllipsisType
 
+
 @dataclasses.dataclass
 class UnpackedFile:
     # If extracted name is random, ... can be specified
@@ -17,7 +18,9 @@ class ArchiveFile:
     content: bytes | None = None
     # You can use [...] for "any, non-zero children" semantics
     # You can also use [UnpackedFile, ...] if only first child is meaningful
-    children: list[UnpackedFile | EllipsisType] = dataclasses.field(default_factory=list)
+    children: list[UnpackedFile | EllipsisType] = dataclasses.field(
+        default_factory=list
+    )
 
 
 TESTFILES_DIR = Path(__file__).absolute().parent / "testfiles"
@@ -39,58 +42,88 @@ TEST_CASES = [
         ],
     ),
     ArchiveFile(
+        path=TESTFILES_DIR / "attachment-collisions.eml",
+        children=[
+            UnpackedFile(
+                name="report.txt",
+                sha256="d92913a8f7fbf9c448bd23f4f509fdc23fe2d9405a5b8c350c2360cd7a14691e",
+            ),
+            UnpackedFile(
+                name="report(1).txt",
+                sha256="01dcac78b0a350fe285b9e86e5665abd3962cbbed271b6259330e21c305acf83",
+            ),
+        ],
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "attachment-types.eml",
+        children=[
+            UnpackedFile(
+                name="résumé.bin",
+                sha256="f9226e1487cb8de753c49c2a1854df67f3912a0c3d88afafe2dad66ebed84b4b",
+            ),
+            UnpackedFile(
+                name="notes.txt",
+                sha256="1d6a5285a484a44d85bbbee352064b84c67e31c7014ded544bef17c8d31c8934",
+            ),
+            UnpackedFile(
+                name="attachment_2",
+                sha256="efb00b1fcac19bb4a4ef0b6136a4ddba335e6649ad41b0eae0ccf359a06b06ec",
+            ),
+        ],
+    ),
+    ArchiveFile(
         path=TESTFILES_DIR / "archive.7z",
         children=[
             UnpackedFile(
                 name="Final Payment Proof.exe",
-                sha256="7ec49d8c7a7fb669fa66582245896e561ee56e8daf98f425bacd6d857c469c4f"
+                sha256="7ec49d8c7a7fb669fa66582245896e561ee56e8daf98f425bacd6d857c469c4f",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.ace",
         children=[
             UnpackedFile(
                 name="BID PRICE (BPS).exe",
-                sha256="2046be8050936440a6f2d2bdb9046b6fe91b64d3e255bdac0065b03476eb49b5"
+                sha256="2046be8050936440a6f2d2bdb9046b6fe91b64d3e255bdac0065b03476eb49b5",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.cab",
         children=[
             UnpackedFile(
                 name="360se.ini",
-                sha256="cf62c3a49baa328239b4eb93e1fb7806b524cf37a671739b381fa5be52e0958b"
+                sha256="cf62c3a49baa328239b4eb93e1fb7806b524cf37a671739b381fa5be52e0958b",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.gz",
         children=[
             UnpackedFile(
                 name="Order 002_PDF.exe",
-                sha256="9bb6a76344a0906d9292209ede4ecb2b87bda68265397a1e854cf464e078ec5d"
+                sha256="9bb6a76344a0906d9292209ede4ecb2b87bda68265397a1e854cf464e078ec5d",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.iso",
         children=[
             UnpackedFile(
                 name="DHL Shipping Document (Please Sign)_Pdf.exe",
-                sha256="65a2e108026ada4d16dc8f8f1bd77aa0f76496593eff4c2b5836082f6bcffe65"
+                sha256="65a2e108026ada4d16dc8f8f1bd77aa0f76496593eff4c2b5836082f6bcffe65",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.lz",
         children=[
             UnpackedFile(
-                name=..., # output name is temporary file name
-                sha256="36ef14835a9d2c8fe241286a7758b7f849bdabccc698e7e78318abfb195dc1db"
+                name=...,  # output name is temporary file name
+                sha256="36ef14835a9d2c8fe241286a7758b7f849bdabccc698e7e78318abfb195dc1db",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.msg",
@@ -106,91 +139,108 @@ TEST_CASES = [
         ],
     ),
     ArchiveFile(
+        path=TESTFILES_DIR / "ole-package.msg",
+        children=[
+            UnpackedFile(
+                name="note.txt",
+                sha256="0330f96677484388980fb7da003c6944c534888f306d4a90f58a9af630e51d6c",
+            )
+        ],
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "embedded-message.msg",
+        children=[
+            UnpackedFile(
+                name="forwarded.msg_inside.txt",
+                sha256="cd80aa312a63ba17e9432d542d2c87ca18de67d7eb331653e60f13cc43a9b39d",
+            ),
+            UnpackedFile(
+                name="sibling.txt",
+                sha256="911a6b9be93a73ae763cedf099b153ff74a4db1223d1457eab0f900fbedb1723",
+            ),
+        ],
+    ),
+    ArchiveFile(
         path=TESTFILES_DIR / "archive.lzh",
         children=[
             UnpackedFile(
                 name="Quotation linked toContract No 2208747-NS202-007-.exe",
-                sha256="04681751fc848d83f2c2609f43786d533e81e301ab5b02dbb1eca6c35f9f5dea"
+                sha256="04681751fc848d83f2c2609f43786d533e81e301ab5b02dbb1eca6c35f9f5dea",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.tar",
         children=[
             UnpackedFile(
                 name="INV-234567SA33.vbs",
-                sha256="e5a851011804b600eed79a0aaecbd6d48308321262336009ffa1ec821a1c8df2"
+                sha256="e5a851011804b600eed79a0aaecbd6d48308321262336009ffa1ec821a1c8df2",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.udf",
         children=[
             UnpackedFile(
                 name="345765r958.exe",
-                sha256="6077a4c8886409d4677bcd79474063a7d01e120ba2d906d729f3950bdc58771a"
+                sha256="6077a4c8886409d4677bcd79474063a7d01e120ba2d906d729f3950bdc58771a",
             )
-        ]
+        ],
     ),
-    ArchiveFile(
-        path=TESTFILES_DIR / "archive.vhd",
-        children=[
-            ...
-        ]
-    ),
+    ArchiveFile(path=TESTFILES_DIR / "archive.vhd", children=[...]),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.xz",
         children=[
             UnpackedFile(
-                name=..., # output name is temporary file name
-                sha256="b27b22b5264ddeb59889e2df01d327ac26a290686d8dd9b9f1c010e1d2122fd5"
+                name=...,  # output name is temporary file name
+                sha256="b27b22b5264ddeb59889e2df01d327ac26a290686d8dd9b9f1c010e1d2122fd5",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "archive.zip",
         children=[
             UnpackedFile(
                 name="scan.exe",
-                sha256="3a11ba9d0fe917eca75c6038281c7bd55dea9ce1e0dc1b478d55e2592e6f846f"
+                sha256="3a11ba9d0fe917eca75c6038281c7bd55dea9ce1e0dc1b478d55e2592e6f846f",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "bloated.rar",
         # debloat fails here, but it's good sample to check if
         # everything fails gracefully
-        children=[]
+        children=[],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "bloated.tgz",
         children=[
             UnpackedFile(
                 name="Zapytanie_Ofertowe_HSSTEEL_20250818_721000452000.exe",
-                sha256="db707b7151b45942526e5d81670f1e4a254615debe4618f472ee49312b70806d"
+                sha256="db707b7151b45942526e5d81670f1e4a254615debe4618f472ee49312b70806d",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "bloated.zip",
         children=[
             UnpackedFile(
                 name="microsoft.exe",
-                sha256="f6c1e53b3cacd1c6ba89a238711a1a132105a6d63a38ce9d3bbb242c9f1c393e"
+                sha256="f6c1e53b3cacd1c6ba89a238711a1a132105a6d63a38ce9d3bbb242c9f1c393e",
             )
-        ]
+        ],
     ),
     ArchiveFile(
         path=TESTFILES_DIR / "infected.zip",
         children=[
             UnpackedFile(
                 name="240155-MTCO-Purchase Note.scr",
-                sha256="1f068fe39ea82125b5fcf7485d14fc4870d000924007f4207f9b7adbb33a5f0f"
+                sha256="1f068fe39ea82125b5fcf7485d14fc4870d000924007f4207f9b7adbb33a5f0f",
             ),
             UnpackedFile(
                 name="GN-1100-24.docx",
-                sha256="179e94db91298bdec3b9256b3f85634b6ca1df6057b2016e2e80e09aff58f51b"
-            )
-        ]
-    )
+                sha256="179e94db91298bdec3b9256b3f85634b6ca1df6057b2016e2e80e09aff58f51b",
+            ),
+        ],
+    ),
 ]

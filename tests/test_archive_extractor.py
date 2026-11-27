@@ -1,24 +1,28 @@
 import itertools
 import pathlib
+from contextlib import closing
 
 import pytest
 from karton.core import Resource, Task
 from karton.core.test import ConfigMock, KartonTestCase
 
 from karton.archive_extractor import ArchiveExtractor
+from karton.archive_extractor.backends import UngooseBackend
 
-from .testcases import TEST_CASES, ArchiveFile
+from .testcases import TEST_CASES, TESTFILES_DIR, ArchiveFile
 
 
 class ArchiveExtractorTestCase(KartonTestCase):
     karton_class = ArchiveExtractor
     # Unpacking backend exercised by this test case ("sflock" or "ungoose")
     backend_name = "sflock"
-    # Fixtures (by name) that the backend is known not to cover, with the
-    # reason as the value. They are skipped in test_extract_archive and
-    # exercised by dedicated xfail-marked tests in the subclass instead,
-    # because pytest cannot xfail individual subtests.
-    known_unsupported: dict[str, str] = {}
+    # Fixtures with backend-specific expectations are skipped here.
+    known_unsupported: dict[str, str] = {
+        "attachment-collisions.eml": "sflock preserves duplicate attachment names.",
+        "attachment-types.eml": "sflock names the unnamed attachment att1.",
+        "embedded-message.msg": "sflock skips attachments inside embedded MSGs.",
+        "ole-package.msg": "sflock reads MSG attachments only from the binary stream.",
+    }
 
     def setUp(self):
         self.config = ConfigMock()
@@ -157,22 +161,8 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
     backend_name = "ungoose"
 
     KNOWN_UNSUPPORTED = {
-        "archive.eml": (
-            "ungoose backend has no e-mail parsers: EML messages are refused "
-            "in ArchiveExtractor.process before extraction. Configure the "
-            "sflock backend to extract EML files"
-        ),
-        "archive.msg": (
-            "ungoose backend has no e-mail parsers: MSG messages are refused "
-            "in ArchiveExtractor.process before extraction, instead of "
-            "unpacking the OLE compound file as a plain directory tree "
-            "(property streams instead of attachments). Configure the "
-            "sflock backend to extract MSG files"
-        ),
         "archive.ace": ("ACE archive format is not supported by any 7-Zip version."),
-        "archive.lz": (
-            "lzip (.lz) archives are not extractable by the 7-Zip binary",
-        ),
+        "archive.lz": ("lzip (.lz) archives are not extractable by the 7-Zip binary",),
         "bloated.tgz": (
             "sflock unpacks nested archives internally (tgz -> tar -> exe), while the "
             "ungoose backend yields the intermediate .tar which is unpacked on the next "
@@ -180,14 +170,6 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
         ),
     }
     known_unsupported = KNOWN_UNSUPPORTED
-
-    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.eml"], strict=False)
-    def test_xfail_eml(self) -> None:
-        self._run_single_case("archive.eml")
-
-    @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.msg"], strict=False)
-    def test_xfail_msg(self) -> None:
-        self._run_single_case("archive.msg")
 
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["archive.ace"], strict=False)
     def test_xfail_ace(self) -> None:
@@ -200,3 +182,26 @@ class UngooseArchiveExtractorTestCase(ArchiveExtractorTestCase):
     @pytest.mark.xfail(reason=KNOWN_UNSUPPORTED["bloated.tgz"], strict=False)
     def test_xfail_bloated_tgz(self) -> None:
         self._run_single_case("bloated.tgz")
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_error"),
+    [
+        ("body-only.eml", None),
+        ("truncated.msg", "Failed to parse MSG as OLE file"),
+    ],
+)
+def test_ungoose_email_without_children(
+    filename: str, expected_error: str | None
+) -> None:
+    filepath = TESTFILES_DIR / filename
+    backend = UngooseBackend()
+    with closing(
+        backend.unpack(str(filepath).encode(), filename.encode(), password=None)
+    ) as archive:
+        assert archive.children == []
+        if expected_error is None:
+            assert archive.error is None
+        else:
+            assert archive.error is not None
+            assert archive.error.startswith(expected_error)

@@ -18,8 +18,10 @@ relies on, so backend implementations are drop-in replaceable:
 import functools
 import hashlib
 import logging
+import os
 from dataclasses import dataclass, field
-from typing import IO, Any, Protocol, cast, runtime_checkable
+from enum import StrEnum, auto
+from typing import IO, Any, Optional, Protocol, cast, runtime_checkable
 
 from sflock.abstracts import File as SFLockFile
 from sflock.abstracts import Unpacker
@@ -102,6 +104,12 @@ class UnpackBackend(Protocol):
 
     name: str
 
+    def handles_password(self, filename: bytes) -> bool:
+        """Based on extension from filename decide if backend should be
+        retried multiple times with common passwords.
+        """
+        ...
+
     def unpack(
         self,
         filepath: bytes,
@@ -136,6 +144,10 @@ class SflockBackend:
         Unpacker.single(sflock_file, password=password, duplicates=[])
         return self._convert(sflock_file)
 
+    @classmethod
+    def handles_password(self, filename: bytes) -> bool:
+        return True
+
     @staticmethod
     def _convert(sflock_file: Any) -> ExtractedArchive:
         """Adapt sflock's File tree into the backend data model.
@@ -156,6 +168,13 @@ class SflockBackend:
         )
 
 
+class SpecialFormat(StrEnum):
+    """Archive formats not handled by 7zip, that need dedicated unpackers in ungoose"""
+
+    eml = auto()
+    msg = auto()
+
+
 class UngooseBackend:
     """Self-contained extraction backend driving the 7-Zip binary (7zz).
 
@@ -165,15 +184,33 @@ class UngooseBackend:
 
     name = "ungoose"
 
+    @classmethod
+    def handles_password(self, filename: bytes) -> bool:
+        fmt = self.special_fmt(filename)
+        return fmt not in [SpecialFormat.msg, SpecialFormat.eml]
+
+    @staticmethod
+    def special_fmt(filename: bytes) -> Optional[SpecialFormat]:
+        # extension is set in 'process' from task's 'extension' header
+        ext = (
+            os.path.splitext(filename.decode("utf-8", "replace"))[1].lstrip(".").lower()
+        )
+        return SpecialFormat(ext) if ext in SpecialFormat else None
+
     def unpack(
         self,
         filepath: bytes,
         filename: bytes,
         password: str | None,
     ) -> ExtractedArchive:
+        from .email import unpack_email
         from .sevenzip import unpack_7z
 
-        return unpack_7z(filepath, filename, password)
+        fmt = self.special_fmt(filename)
+        if fmt in (SpecialFormat.msg, SpecialFormat.eml):
+            return unpack_email(filepath, filename, fmt)
+        else:
+            return unpack_7z(filepath, filename, password)
 
 
 #: Available backends, in the order they should be documented
