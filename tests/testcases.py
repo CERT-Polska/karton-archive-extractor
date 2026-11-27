@@ -42,6 +42,36 @@ TEST_CASES = [
         ],
     ),
     ArchiveFile(
+        path=TESTFILES_DIR / "attachment-collisions.eml",
+        children=[
+            UnpackedFile(
+                name="report.txt",
+                sha256="d92913a8f7fbf9c448bd23f4f509fdc23fe2d9405a5b8c350c2360cd7a14691e",
+            ),
+            UnpackedFile(
+                name="report(1).txt",
+                sha256="01dcac78b0a350fe285b9e86e5665abd3962cbbed271b6259330e21c305acf83",
+            ),
+        ],
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "attachment-types.eml",
+        children=[
+            UnpackedFile(
+                name="résumé.bin",
+                sha256="f9226e1487cb8de753c49c2a1854df67f3912a0c3d88afafe2dad66ebed84b4b",
+            ),
+            UnpackedFile(
+                name="notes.txt",
+                sha256="1d6a5285a484a44d85bbbee352064b84c67e31c7014ded544bef17c8d31c8934",
+            ),
+            UnpackedFile(
+                name="attachment_2",
+                sha256="efb00b1fcac19bb4a4ef0b6136a4ddba335e6649ad41b0eae0ccf359a06b06ec",
+            ),
+        ],
+    ),
+    ArchiveFile(
         path=TESTFILES_DIR / "archive.7z",
         children=[
             UnpackedFile(
@@ -105,6 +135,28 @@ TEST_CASES = [
             UnpackedFile(
                 name="shipment_details.txt",
                 sha256="364ffd0cbf17018fa68f7ee7312e59db5824a8a1ee9634a41399ced58f808596",
+            ),
+        ],
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "ole-package.msg",
+        children=[
+            UnpackedFile(
+                name="note.txt",
+                sha256="0330f96677484388980fb7da003c6944c534888f306d4a90f58a9af630e51d6c",
+            )
+        ],
+    ),
+    ArchiveFile(
+        path=TESTFILES_DIR / "embedded-message.msg",
+        children=[
+            UnpackedFile(
+                name="forwarded.msg_inside.txt",
+                sha256="cd80aa312a63ba17e9432d542d2c87ca18de67d7eb331653e60f13cc43a9b39d",
+            ),
+            UnpackedFile(
+                name="sibling.txt",
+                sha256="911a6b9be93a73ae763cedf099b153ff74a4db1223d1457eab0f900fbedb1723",
             ),
         ],
     ),

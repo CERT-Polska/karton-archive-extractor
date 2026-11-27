@@ -332,6 +332,12 @@ def _msg_attachment_children(
         logger.warning("Attached message without data storage: %r", filename)
 
     data = _msg_binary(ole, attach_parts, _PROP_ATTACH_DATA)
+    if data is None and method == _ATTACH_METHOD_OLE:
+        data = _msg_stream(
+            ole,
+            attach_parts + (_STORAGE_EMBEDDED_MSG,),
+            "\x01Ole10Native",
+        )
     if data is None:
         logger.warning("MSG attachment %r has no data stream", filename)
         return []

@@ -1,0 +1,37 @@
+From: sender@example.test
+To: recipient@example.test
+Subject: Repeated attachment names
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="===============0448398553493643211=="
+
+--===============0448398553493643211==
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+This is the body of the test message.
+
+--===============0448398553493643211==
+Content-Type: text/plain
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.txt"
+MIME-Version: 1.0
+
+Rmlyc3QgY29weSBvZiB0aGUgcmVwb3J0Lgo=
+
+--===============0448398553493643211==
+Content-Type: text/plain
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.txt"
+MIME-Version: 1.0
+
+Rmlyc3QgY29weSBvZiB0aGUgcmVwb3J0Lgo=
+
+--===============0448398553493643211==
+Content-Type: text/plain
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="report.txt"
+MIME-Version: 1.0
+
+UmV2aXNlZCByZXBvcnQuCg==
+
+--===============0448398553493643211==--
